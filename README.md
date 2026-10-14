@@ -2,7 +2,7 @@
 
 This project will compare routing policies on a fixed prompt set using quality, provider-reported cost and latency. It will also export reusable accounting, provider and routing modules.
 
-Current implementation: **WP01 portable wire models and generated schemas**. Provider execution, durable accounting and routing evaluation are not implemented yet.
+Current implementation: **WP02 portable wire models, SQLite ledger and Decimal pricing foundation**. Provider/controller execution and routing evaluation are not implemented yet.
 
 ## Quickstart
 
@@ -16,22 +16,22 @@ uv run llm-router-eval status
 The status command uses no network or API keys:
 
 ```json
-{"application": "llm-router-eval", "evaluation": "not_implemented", "implementation": "wire_models_and_schemas", "network": "not_required", "shared_modules": "models_only_execution_not_implemented", "version": "0.0.1"}
+{"application": "llm-router-eval", "evaluation": "not_implemented", "implementation": "ledger_and_pricing_foundation", "network": "not_required", "shared_modules": "ledger_pricing_available_provider_execution_not_implemented", "version": "0.0.1"}
 ```
 
 ## Architecture
 
-A local Python CLI will collect responses, replay routing policies, score results and generate a quality-versus-cost chart. SQLite will own durable accounting events; JSONL will be an export. The current shared models describe accepted request/result/accounting declarations. See the [public interface](docs/INTERFACE.md) for validation and copy boundaries.
+A local Python CLI will collect responses, replay routing policies, score results and generate a quality-versus-cost chart. The current SQLite ledger owns durable accounting events; JSONL is a derived export. See the [public interface](docs/INTERFACE.md) and [ledger/pricing contract](src/llm_router_eval/shared/callledger/README.md) for validation, evidence and copy boundaries.
 
 ## Results and cost
 
-No evaluation has run. Model quality, cost, latency and savings are **not yet measured**. No generated result table or demo recording is available at this model stage.
+No evaluation has run. Model quality, cost, latency and savings are **not yet measured**. Committed prices and accounting scenarios are explicitly synthetic test fixtures.
 
 ## Limits and verification
 
 See [limitations](docs/LIMITATIONS.md) and [Bolt handoff](BOLT-HANDOFF.md). The package is a local tool; importing it into a website builder does not run Python evaluation.
 
-Coding agents wrote this implementation. Synthetic offline tests cover typed wire rejection, declared accounting consistency, public request identity, metadata projection and detached model imports with network disabled. They do not exercise provider transport or durable funding. Remote CI has not run; local contract evidence does not establish finished-app acceptance.
+Coding agents wrote this implementation. Synthetic offline tests cover typed wire rejection, atomic whole-operation funding, conserved holds, persistent counters/unknown liabilities, actual process-crash commit boundaries, concurrent admission, torn projection recovery, Decimal billing, privacy controls and detached imports. They do not exercise provider transport or actual price/token proofs. Remote CI has not run; local contract evidence does not establish finished-app acceptance.
 
 ## Development
 

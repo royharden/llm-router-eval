@@ -47,9 +47,9 @@ def test_installed_status_is_keyless_and_has_no_network(tmp_path):
     )
     assert result.returncode == 0, result.stderr
     status = json.loads(result.stdout)
-    assert status["implementation"] == "wire_models_and_schemas"
+    assert status["implementation"] == "ledger_and_pricing_foundation"
     assert status["evaluation"] == "not_implemented"
-    assert status["shared_modules"] == "models_only_execution_not_implemented"
+    assert status["shared_modules"] == "ledger_pricing_available_provider_execution_not_implemented"
 
 
 def test_unimplemented_evaluation_command_is_rejected(tmp_path):

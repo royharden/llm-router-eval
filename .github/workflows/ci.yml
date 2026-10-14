@@ -1,4 +1,4 @@
-name: Offline scaffold checks
+name: Offline core checks
 
 on:
   push:
@@ -19,5 +19,5 @@ jobs:
       - run: uv sync --frozen
       - run: uv run ruff check .
       - run: uv run ruff format --check .
-      - run: uv run pytest -m "not live" --junitxml=scaffold-tests.xml
+      - run: uv run pytest -m "not live" --junitxml=offline-tests.xml
       - run: uv run llm-router-eval status

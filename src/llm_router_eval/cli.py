@@ -10,7 +10,9 @@ from . import __version__
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="llm-router-eval",
-        description="Local router evaluation. Current implementation: wire models and schemas.",
+        description=(
+            "Local router evaluation. Current implementation: ledger and pricing foundation."
+        ),
     )
     parser.add_argument("--version", action="version", version=__version__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -21,9 +23,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             {
                 "application": "llm-router-eval",
                 "version": __version__,
-                "implementation": "wire_models_and_schemas",
+                "implementation": "ledger_and_pricing_foundation",
                 "evaluation": "not_implemented",
-                "shared_modules": "models_only_execution_not_implemented",
+                "shared_modules": "ledger_pricing_available_provider_execution_not_implemented",
                 "network": "not_required",
             },
             sort_keys=True,

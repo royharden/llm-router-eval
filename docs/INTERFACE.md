@@ -1,4 +1,4 @@
-# Portable wire models (schema version 1)
+# Portable wire models and accounting foundation (wire schema version 1)
 
 The Python models under `llm_router_eval.shared.callledger.models` and `llm_router_eval.shared.providers.models` define the normative wire declarations. `scripts/generate_schemas.py` generates the 18 JSON Schemas in `docs/schemas`; `--check` verifies exact byte parity. JSON Schema describes structural constraints. Python validators also enforce distribution sums, weighted Score consistency, cross-field bindings and declared accounting completeness.
 
@@ -16,7 +16,9 @@ The Python models under `llm_router_eval.shared.callledger.models` and `llm_rout
 
 ## Accounting declarations
 
-`NormalizedUsage`, `BillingPolicy` and `CostObservation` distinguish unknown usage from unbilled null output. A known cost declaration requires all declared billed components. These models do not calculate prices. `OperationPlan`, `Allocation` and `FundingDeclaration` check whole declared fan-out exposure, attempt quota and allocation digest. They do not reserve money, persist events, serialize concurrent operations, transfer liabilities or enforce dispatch. Those behaviors need the future ledger implementation.
+`NormalizedUsage`, `BillingPolicy` and `CostObservation` distinguish unknown usage from unbilled null output. A known cost declaration requires all declared billed components. These declaration models do not calculate prices. `OperationPlan`, `Allocation` and `FundingDeclaration` check whole declared fan-out exposure, attempt quota and allocation digest.
+
+The separate `callledger.ledger.Ledger` now provides SQLite-authoritative atomic whole-operation funding, conserved attempt transfers, cumulative counters and persistent known/unknown liabilities. `callledger.pricing.PricePolicy` performs Decimal indicative billing from an explicit snapshot. Both require trusted caller evidence; the committed snapshots/counts are synthetic and cannot establish live funding proof. See the [accounting contract](../src/llm_router_eval/shared/callledger/README.md) for methods, deadline/hold semantics, durability, above-bound halt behavior and remaining controller obligations.
 
 `MetadataRecord` permits only closed codes and numeric usage fields. Raw prompt/response/error bodies and arbitrary provider usage strings are forbidden in this projection. Validation exception text hides input values, but callers must also avoid printing the structured `errors()` data, which can include inputs. No capture store or global cache exists in this edition.
 
@@ -24,4 +26,4 @@ The Python models under `llm_router_eval.shared.callledger.models` and `llm_rout
 
 Copy the complete `shared` directory (including its empty root initializer and both sibling subpackages) into a consumer-owned package. Provider models import `..callledger.models`; the copy requires Python 3.12 and Pydantic >=2.11,<3. The repository lock pins the tested version. There are no SDK, HTTP, owner-app, router or scorer imports in this closure. A detached-copy test blocks owner-app imports and network construction.
 
-This edition contains models, generated schemas and synthetic offline contract tests. It has no `complete`/`run` transport, authentication, controller, durable ledger, pricing engine, routing policy, scorer, corpus or live provider result. Arbitrary generation-output JSON Schema execution is deferred to the driver; the current boundary checks declared parsed presence and text/parsed consistency only. Consumers must treat this as a models-only source snapshot, not an executable provider adapter. Source commit and file hashes must be pinned in each consumer's own adoption receipt after the owner commits the snapshot.
+This edition contains wire models, generated schemas, the accounting/pricing foundation and synthetic offline tests. It has no `complete`/`run` provider transport, authentication, controller, routing policy, scorer, corpus or live provider result. Arbitrary generation-output JSON Schema execution is deferred to the driver; the current boundary checks declared parsed presence and text/parsed consistency only. Accounting methods do not send requests or perform capture lookup. Consumers must treat this as a foundation source snapshot, not an executable provider adapter. Source commit and file hashes must be pinned in each consumer's own adoption receipt after the owner commits the snapshot.

@@ -1,5 +1,6 @@
-"""Accounting wire models. Durable storage is not implemented yet."""
+"""Portable accounting declarations and SQLite funding foundation; no provider transport."""
 
 from . import models
+from .ledger import Ledger, LedgerError
 
-__all__ = ["models"]
+__all__ = ["Ledger", "LedgerError", "models"]
