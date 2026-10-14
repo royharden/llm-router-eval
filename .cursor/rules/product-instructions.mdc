@@ -1,0 +1,6 @@
+---
+description: Product commands and invariants
+alwaysApply: true
+---
+
+Read the repository-root AGENTS.md for product commands, invariants and the enclosing workspace's coordination binding.
