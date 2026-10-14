@@ -331,16 +331,24 @@ class Result(WireModel):
             raise ValueError("unavailable first output cannot have a made-up time")
         if self.origin in {"mock", "replay"}:
             if (
-                self.source_capture is None
-                or self.current_external_cost_usd is None
+                self.current_external_cost_usd is None
                 or Decimal(self.current_external_cost_usd) != 0
             ):
                 raise ValueError(
                     "network-free reuse requires source provenance and zero current cost"
                 )
-            expected = "synthetic" if self.origin == "mock" else "live"
-            if self.source_capture.origin != expected:
-                raise ValueError("reuse origin conflicts with capture origin")
+            if self.source_capture is None:
+                if self.status == "ok" or self.attempt_ids:
+                    raise ValueError("only no-dispatch reuse failure can lack capture provenance")
+            else:
+                expected = "synthetic" if self.origin == "mock" else "live"
+                if self.source_capture.origin != expected:
+                    raise ValueError("reuse origin conflicts with capture origin")
+                if (self.source_capture.model_requested, self.source_capture.model_reported) != (
+                    self.model_requested,
+                    self.model_reported,
+                ):
+                    raise ValueError("reuse model provenance mismatch")
         if self.status == "ok":
             if self.error is not None:
                 raise ValueError("successful result cannot carry an error")

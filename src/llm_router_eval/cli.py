@@ -11,7 +11,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="llm-router-eval",
         description=(
-            "Local router evaluation. Current implementation: ledger and pricing foundation."
+            "Local router evaluation. Current implementation: offline provider foundation."
         ),
     )
     parser.add_argument("--version", action="version", version=__version__)
@@ -23,9 +23,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             {
                 "application": "llm-router-eval",
                 "version": __version__,
-                "implementation": "ledger_and_pricing_foundation",
+                "implementation": "offline_provider_foundation",
                 "evaluation": "not_implemented",
-                "shared_modules": "ledger_pricing_available_provider_execution_not_implemented",
+                "shared_modules": "offline_controller_available_live_transport_not_implemented",
                 "network": "not_required",
             },
             sort_keys=True,

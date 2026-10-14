@@ -1,6 +1,6 @@
 # Bolt handoff
 
-Status: **local WP02 wire/ledger/pricing foundation / hosting specification only**. No runnable browser app or backend provisioning inventory exists yet.
+Status: **local WP03 offline provider foundation / hosting specification only**. No runnable browser app or backend provisioning inventory exists yet.
 
 | Resource | Requirement |
 |---|---|
@@ -12,6 +12,6 @@ Status: **local WP02 wire/ledger/pricing foundation / hosting specification only
 | Safe result JSON and charts | Planned; not generated yet |
 | Remote repository / import / publication | Requires an actual grant; absent |
 
-The local package uses uv sync --frozen and uv run llm-router-eval status. This reports the ledger/pricing foundation stage without keys. It does not execute evaluation. Shared Python declarations and generated JSON Schemas are documented in docs/INTERFACE.md; the accounting core is documented in src/llm_router_eval/shared/callledger/README.md.
+The local package uses uv sync --frozen and uv run llm-router-eval status. This reports the offline foundation without keys. It does not execute evaluation. See docs/INTERFACE.md, docs/provider-contracts.md and src/llm_router_eval/shared/callledger/README.md for actual implemented boundaries.
 
 A future viewer may import generated safe result assets. Importing this Python repository does not provision a Python worker, SQLite ledger or API credentials. A provisioning prompt will be prepared only after actual implemented resources and readiness evidence exist. Current action: inspection/preparation only.

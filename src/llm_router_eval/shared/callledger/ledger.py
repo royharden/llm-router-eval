@@ -8,6 +8,7 @@ import tempfile
 import time
 from collections.abc import Iterable
 from contextlib import contextmanager
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal, localcontext
 from pathlib import Path
@@ -47,6 +48,30 @@ class ReuseAccounting(WireModel):
     source_usage_sha256: Digest | None
     source_price_sha256: Digest | None
     current_external_cost_usd: Literal["0"]
+
+
+@dataclass(frozen=True)
+class AdmissionView:
+    """Read-only snapshot, never a dispatch authorization or an unexpired lease."""
+
+    mode: str
+    operation_state: str
+    child_state: str
+    used_attempts: int
+    remaining_attempts: int
+    repairs_used: int
+    max_attempts: int
+    max_repairs: int
+    reservation_usd: str
+    price_policy_json: str | None
+    price_snapshot_sha256: str | None
+    effective_limits_json: str
+    deadline_remaining_s: float
+    cumulative_dispatched: int
+    outbound_ceiling: int
+    provider_config_sha256: str
+    model: str
+    bound_evidence_sha256: str
 
 
 def _json(value) -> str:
@@ -143,7 +168,7 @@ class Ledger:
     def _initialize(self):
         with self._transaction():
             version = self.connection.execute("PRAGMA user_version").fetchone()[0]
-            if version not in (0, 1):
+            if version not in (0, 1, 2):
                 raise LedgerError("schema_version")
             statements = [
                 "CREATE TABLE IF NOT EXISTS authorities (id TEXT PRIMARY KEY, "
@@ -174,10 +199,21 @@ class Ledger:
                 "REFERENCES events(sequence), projected INTEGER NOT NULL DEFAULT 0)",
                 "CREATE TABLE IF NOT EXISTS price_snapshots "
                 "(sha TEXT PRIMARY KEY, definition TEXT NOT NULL)",
+                "CREATE TABLE IF NOT EXISTS child_limits "
+                "(operation_id TEXT NOT NULL, child_id TEXT NOT NULL, "
+                "limits_json TEXT NOT NULL, PRIMARY KEY(operation_id,child_id), "
+                "FOREIGN KEY(operation_id,child_id) REFERENCES children(operation_id,child_id))",
+                "CREATE TABLE IF NOT EXISTS authority_limits (authority_id TEXT PRIMARY KEY "
+                "REFERENCES authorities(id), outbound_ceiling INTEGER NOT NULL, "
+                "wall_seen TEXT NOT NULL)",
             ]
             for statement in statements:
                 self.connection.execute(statement)
-            self.connection.execute("PRAGMA user_version=1")
+            self.connection.execute(
+                "INSERT OR IGNORE INTO child_limits SELECT c.operation_id,c.child_id,o.limits_json "
+                "FROM children c JOIN operations o ON c.operation_id=o.id"
+            )
+            self.connection.execute("PRAGMA user_version=2")
             if self.snapshot is not None:
                 self.connection.execute(
                     "INSERT OR IGNORE INTO price_snapshots VALUES(?,?)",
@@ -196,6 +232,180 @@ class Ledger:
                     (self.authority.authority_id, definition, self._now().isoformat()),
                 )
                 self._emit("authority_created", {"scope_sha256": self.authority.scope_sha256})
+            self.connection.execute(
+                "INSERT OR IGNORE INTO authority_limits VALUES(?,?,?)",
+                (
+                    self.authority.authority_id,
+                    self.authority.max_outbound_attempts,
+                    self._now().isoformat(),
+                ),
+            )
+
+    def _allocation_view(self, allocation, *, context, limits, request, require_zero_dispatch):
+        context = CallContext.model_validate(_dump(context))
+        request = RequestEvidence.model_validate(_dump(request))
+        if self.requests.get(request.evidence_sha256) != request:
+            raise LedgerError("untrusted_request")
+        operation = self._operation(allocation)
+        child = self.connection.execute(
+            "SELECT * FROM children WHERE operation_id=? AND child_id=?",
+            (operation["id"], context.child_id),
+        ).fetchone()
+        if child is None:
+            raise LedgerError("child_unknown")
+        definition = json.loads(child["definition"])
+        root, submitted = json.loads(operation["context"]), _dump(context)
+        for key in ["child_id", "span_id", "parent_span_id", "purpose"]:
+            root.pop(key, None)
+            submitted.pop(key, None)
+        if root != submitted or context.purpose != definition["purpose"]:
+            raise LedgerError("context_mismatch")
+        if request.bound_evidence_sha256 != definition["bound_evidence_sha256"]:
+            raise LedgerError("bound_mismatch")
+        stored = self.connection.execute(
+            "SELECT limits_json FROM child_limits WHERE operation_id=? AND child_id=?",
+            (operation["id"], context.child_id),
+        ).fetchone()
+        old = Limits.model_validate(json.loads(stored[0] if stored else operation["limits_json"]))
+        limits = Limits.model_validate(_dump(limits)) if limits is not None else old
+        for key, prior in _dump(old).items():
+            if key == "schema_version":
+                continue
+            value = getattr(limits, key)
+            if key == "run_deadline_utc":
+                if _utc(value) > _utc(prior):
+                    raise LedgerError("caller_limits")
+            elif prior is not None and (value is None or value > prior):
+                raise LedgerError("caller_limits")
+        # These cannot be safely retrofitted without a new persisted scheduling protocol.
+        if (
+            limits.operation_deadline_s != old.operation_deadline_s
+            or limits.max_concurrent_operations != old.max_concurrent_operations
+        ):
+            raise LedgerError("strict_limits_unsupported")
+        if request.input_token_count > definition["input_token_maximum"] or (
+            limits.max_total_input_tokens is not None
+            and request.input_token_count > limits.max_total_input_tokens
+        ):
+            raise LedgerError("request_bound")
+        if (
+            limits.max_state_plus_longest_question_tokens is not None
+            and request.input_token_count > limits.max_state_plus_longest_question_tokens
+        ):
+            # Conservative total-input proof may dominate this subset; never count from bytes.
+            raise LedgerError("request_bound")
+        maxima = [definition["output_token_maximum"]]
+        if request.output_token_maximum is not None:
+            maxima.append(limits.max_total_output_tokens)
+        for maximum in maxima:
+            if maximum is not None and (
+                request.output_token_maximum is None or request.output_token_maximum > maximum
+            ):
+                raise LedgerError("request_bound")
+        row = self.connection.execute(
+            "SELECT * FROM authorities WHERE id=?", (self.authority.authority_id,)
+        ).fetchone()
+        wall = self._now()
+        seen_wall = self.connection.execute(
+            "SELECT wall_seen FROM authority_limits WHERE authority_id=?",
+            (self.authority.authority_id,),
+        ).fetchone()[0]
+        if wall < _utc(seen_wall):
+            raise LedgerError("clock_rollback")
+        now = max(
+            wall,
+            self._anchor_wall + timedelta(seconds=max(self.monotonic() - self._anchor_tick, 0)),
+            _utc(row["last_seen"]),
+        )
+        if row["halted"] and not require_zero_dispatch:
+            raise LedgerError("halted")
+        remaining = (
+            min(
+                _utc(operation["deadline"]),
+                _utc(limits.run_deadline_utc),
+                _utc(self.authority.run_deadline_utc),
+                _utc(self.authority.expires_at)
+                if self.authority.expires_at
+                else _utc(self.authority.run_deadline_utc),
+            )
+            - now
+        ).total_seconds()
+        if remaining <= 0:
+            raise LedgerError("deadline")
+        if require_zero_dispatch and (
+            operation["mode"] != "offline"
+            or definition["max_attempts"] != 0
+            or child["remaining"] != 0
+            or child["used"] != 0
+            or limits.max_outbound_attempts != 0
+        ):
+            raise LedgerError("zero_quota_required")
+        ceiling = self.connection.execute(
+            "SELECT outbound_ceiling FROM authority_limits WHERE authority_id=?",
+            (self.authority.authority_id,),
+        ).fetchone()[0]
+        used = self.connection.execute(
+            "SELECT COUNT(*) FROM attempts WHERE authority_id=?", (self.authority.authority_id,)
+        ).fetchone()[0]
+        return AdmissionView(
+            operation["mode"],
+            operation["state"],
+            child["state"],
+            child["used"],
+            child["remaining"],
+            child["repairs"],
+            min(definition["max_attempts"], limits.max_attempts_total),
+            min(definition["max_repairs"], limits.max_content_repairs),
+            definition["reserved_usd_per_attempt"],
+            child["policy"],
+            child["snapshot_sha"],
+            _json(_dump(limits)),
+            remaining,
+            used,
+            min(ceiling, limits.max_outbound_attempts),
+            definition["provider_config_sha256"],
+            definition["model"],
+            definition["bound_evidence_sha256"],
+        )
+
+    def validate_allocation(
+        self,
+        allocation: Allocation,
+        *,
+        context: CallContext,
+        limits: Limits,
+        request: RequestEvidence,
+        require_zero_dispatch: bool = False,
+    ) -> AdmissionView:
+        """Observe persisted bindings; transfer/reuse still recheck atomically."""
+        try:
+            self.connection.execute("BEGIN")
+            result = self._allocation_view(
+                allocation,
+                context=context,
+                limits=limits,
+                request=request,
+                require_zero_dispatch=require_zero_dispatch,
+            )
+            self.connection.commit()
+            return result
+        except BaseException:
+            self.connection.rollback()
+            raise
+
+    def _persist_limits(self, allocation, context, view):
+        self.connection.execute(
+            "INSERT INTO child_limits VALUES(?,?,?) ON "
+            "CONFLICT(operation_id,child_id) DO UPDATE SET "
+            "limits_json=excluded.limits_json",
+            (allocation.operation_id, context.child_id, view.effective_limits_json),
+        )
+        if view.mode != "offline":
+            self.connection.execute(
+                "UPDATE authority_limits SET "
+                "outbound_ceiling=MIN(outbound_ceiling,?) WHERE authority_id=?",
+                (view.outbound_ceiling, self.authority.authority_id),
+            )
 
     def _now(self):
         now = self.clock()
@@ -225,7 +435,12 @@ class Ledger:
         row = self.connection.execute(
             "SELECT * FROM authorities WHERE id=?", (self.authority.authority_id,)
         ).fetchone()
-        if funded and now < _utc(row["last_seen"]):
+        wall = now
+        wall_seen = self.connection.execute(
+            "SELECT wall_seen FROM authority_limits WHERE authority_id=?",
+            (self.authority.authority_id,),
+        ).fetchone()[0]
+        if funded and wall < _utc(wall_seen):
             raise LedgerError("clock_rollback")
         now = max(now, effective, _utc(row["last_seen"]))
         if funded and row["halted"]:
@@ -238,6 +453,10 @@ class Ledger:
         self.connection.execute(
             "UPDATE authorities SET last_seen=? WHERE id=?",
             (now.isoformat(), self.authority.authority_id),
+        )
+        self.connection.execute(
+            "UPDATE authority_limits SET wall_seen=? WHERE authority_id=?",
+            (max(wall, _utc(wall_seen)).isoformat(), self.authority.authority_id),
         )
         return now
 
@@ -408,7 +627,15 @@ class Ledger:
                 self.authority.cap_usd
             ):
                 raise LedgerError("budget_rejected")
-            quota = min(limits.max_outbound_attempts, self.authority.max_outbound_attempts)
+            persisted_ceiling = self.connection.execute(
+                "SELECT outbound_ceiling FROM authority_limits WHERE authority_id=?",
+                (self.authority.authority_id,),
+            ).fetchone()[0]
+            quota = min(
+                limits.max_outbound_attempts,
+                self.authority.max_outbound_attempts,
+                persisted_ceiling,
+            )
             if (
                 totals["dispatched_attempts"]
                 + totals["future_attempts"]
@@ -501,6 +728,7 @@ class Ledger:
         context: CallContext,
         request: RequestEvidence,
         content_repair: bool = False,
+        caller_limits: Limits | None = None,
     ) -> str:
         if type(content_repair) is not bool:
             raise LedgerError("caller_limits")
@@ -510,6 +738,21 @@ class Ledger:
             raise LedgerError("untrusted_request")
         with self._transaction():
             now = self._time()
+            view = self._allocation_view(
+                allocation,
+                context=context,
+                limits=caller_limits,
+                request=request,
+                require_zero_dispatch=False,
+            )
+            if (
+                view.used_attempts >= view.max_attempts
+                or view.cumulative_dispatched >= view.outbound_ceiling
+            ):
+                raise LedgerError("attempt_limit")
+            if content_repair and view.repairs_used >= view.max_repairs:
+                raise LedgerError("repair_limit")
+            self._persist_limits(allocation, context, view)
             operation = self._operation(allocation)
             if operation["mode"] == "offline":
                 raise LedgerError("offline_dispatch")
@@ -797,6 +1040,7 @@ class Ledger:
         context: CallContext,
         request: RequestEvidence,
         provenance: ReuseAccounting,
+        caller_limits: Limits | None = None,
     ):
         """Account a caller's network-free lookup; never retrieves or invents a payload."""
         provenance = ReuseAccounting.model_validate(_dump(provenance))
@@ -809,6 +1053,15 @@ class Ledger:
             raise LedgerError("untrusted_request")
         child_id = context.child_id
         with self._transaction():
+            if caller_limits is not None:
+                view = self._allocation_view(
+                    allocation,
+                    context=context,
+                    limits=caller_limits,
+                    request=request,
+                    require_zero_dispatch=True,
+                )
+                self._persist_limits(allocation, context, view)
             operation = self._operation(allocation)
             if operation["mode"] != "offline":
                 raise LedgerError("offline_dispatch")
