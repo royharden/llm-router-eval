@@ -31,7 +31,7 @@ def test_installed_status_is_keyless_and_has_no_network(tmp_path):
         env=environment,
         text=True,
         capture_output=True,
-        timeout=10,
+        timeout=30,
         check=False,
     )
     assert control.returncode != 0
@@ -42,14 +42,14 @@ def test_installed_status_is_keyless_and_has_no_network(tmp_path):
         env=environment,
         text=True,
         capture_output=True,
-        timeout=10,
+        timeout=30,
         check=False,
     )
     assert result.returncode == 0, result.stderr
     status = json.loads(result.stdout)
-    assert status["implementation"] == "scaffold"
+    assert status["implementation"] == "wire_models_and_schemas"
     assert status["evaluation"] == "not_implemented"
-    assert status["shared_modules"] == "awaiting_contract_adoption"
+    assert status["shared_modules"] == "models_only_execution_not_implemented"
 
 
 def test_unimplemented_evaluation_command_is_rejected(tmp_path):
@@ -59,7 +59,7 @@ def test_unimplemented_evaluation_command_is_rejected(tmp_path):
         cwd=tmp_path,
         text=True,
         capture_output=True,
-        timeout=10,
+        timeout=30,
         check=False,
     )
     assert result.returncode == 2

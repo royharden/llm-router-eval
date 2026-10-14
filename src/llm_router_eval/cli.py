@@ -1,4 +1,4 @@
-"""Keyless bootstrap entrypoint; evaluation modules are not implemented yet."""
+"""Keyless status entrypoint; evaluation modules are not implemented yet."""
 
 import argparse
 import json
@@ -10,7 +10,7 @@ from . import __version__
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="llm-router-eval",
-        description="Local router evaluation. Current implementation: keyless scaffold.",
+        description="Local router evaluation. Current implementation: wire models and schemas.",
     )
     parser.add_argument("--version", action="version", version=__version__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -21,9 +21,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             {
                 "application": "llm-router-eval",
                 "version": __version__,
-                "implementation": "scaffold",
+                "implementation": "wire_models_and_schemas",
                 "evaluation": "not_implemented",
-                "shared_modules": "awaiting_contract_adoption",
+                "shared_modules": "models_only_execution_not_implemented",
                 "network": "not_required",
             },
             sort_keys=True,

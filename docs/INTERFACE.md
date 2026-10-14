@@ -1,0 +1,27 @@
+# Portable wire models (schema version 1)
+
+The Python models under `llm_router_eval.shared.callledger.models` and `llm_router_eval.shared.providers.models` define the normative wire declarations. `scripts/generate_schemas.py` generates the 18 JSON Schemas in `docs/schemas`; `--check` verifies exact byte parity. JSON Schema describes structural constraints. Python validators also enforce distribution sums, weighted Score consistency, cross-field bindings and declared accounting completeness.
+
+## Typed judgments
+
+`TypedJudgmentRequest` accepts native Choice, Noul and Score questions. Choice keeps ordered option criteria; Noul optionally accepts a true/false description map and omits absent descriptions. Score accepts 2–10 ordered criteria, including structured instructions. Answers are a distinct closed union: Noul has a probability and no invented confidence; Score preserves a fractional weighted position with a string-valued response legend and zero-based keys.
+
+`validate_typed_wire(json_text, request)` rejects duplicate keys, nonfinite JSON, extra fields, missing/extra answer IDs, mismatched primitives, criteria hashes and option coverage. Both Choice and Score distributions must sum to one within 1e-6; Score consistency tolerance is 1e-3. Invalid distributions are rejected without normalization. The actual reported model is required. `validate_for` rechecks serialized nested data because frozen Pydantic models do not make nested dictionaries immutable.
+
+## Requests, results and identity
+
+`GenerateRequest` keeps text/image parts separate from typed JSON state. Its wire key `schema` maps to the Python attribute `output_schema`. `Result` preserves raw usage transiently, normalized numeric usage, attempt references, error codes and origin. Failed results cannot expose validated parsed or typed outputs. Replay/mock declarations require capture provenance and zero current external cost; source cost may remain unknown. An unavailable first-output time is null.
+
+`ExecutionEnvelope` requires explicit purpose, ledger reference, budget, context, limits and allocation. It checks declared authority/operation/deadline/quota/shape consistency. Semantic request identity excludes machine image paths and ephemeral execution IDs, while retaining ordered criteria, public configuration, source generation and consumer context. The dispatched request digest includes the actual execution reference. Image declarations carry content/rendition hashes and geometry; these declarations do not inspect files, verify image magic, resolve symlinks or prevent a later file change. A future driver must validate and send the same immutable bytes.
+
+## Accounting declarations
+
+`NormalizedUsage`, `BillingPolicy` and `CostObservation` distinguish unknown usage from unbilled null output. A known cost declaration requires all declared billed components. These models do not calculate prices. `OperationPlan`, `Allocation` and `FundingDeclaration` check whole declared fan-out exposure, attempt quota and allocation digest. They do not reserve money, persist events, serialize concurrent operations, transfer liabilities or enforce dispatch. Those behaviors need the future ledger implementation.
+
+`MetadataRecord` permits only closed codes and numeric usage fields. Raw prompt/response/error bodies and arbitrary provider usage strings are forbidden in this projection. Validation exception text hides input values, but callers must also avoid printing the structured `errors()` data, which can include inputs. No capture store or global cache exists in this edition.
+
+## Copy closure and current boundary
+
+Copy the complete `shared` directory (including its empty root initializer and both sibling subpackages) into a consumer-owned package. Provider models import `..callledger.models`; the copy requires Python 3.12 and Pydantic >=2.11,<3. The repository lock pins the tested version. There are no SDK, HTTP, owner-app, router or scorer imports in this closure. A detached-copy test blocks owner-app imports and network construction.
+
+This edition contains models, generated schemas and synthetic offline contract tests. It has no `complete`/`run` transport, authentication, controller, durable ledger, pricing engine, routing policy, scorer, corpus or live provider result. Arbitrary generation-output JSON Schema execution is deferred to the driver; the current boundary checks declared parsed presence and text/parsed consistency only. Consumers must treat this as a models-only source snapshot, not an executable provider adapter. Source commit and file hashes must be pinned in each consumer's own adoption receipt after the owner commits the snapshot.
