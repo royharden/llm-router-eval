@@ -2,7 +2,7 @@
 
 This project will compare routing policies on a fixed prompt set using quality, provider-reported cost and latency. It will also export reusable accounting, provider and routing modules.
 
-Current implementation: **WP03 offline provider/controller foundation**, with portable wire models, SQLite/Decimal accounting, strict fixture lookup and injected payload contracts. Live SDK/HTTP transport and routing evaluation are not implemented yet.
+Current implementation: **offline provider/controller foundation and local data admission**, with portable wire models, SQLite/Decimal accounting, strict fixture lookup, injected payload contracts and family-split/configuration-seal validation. Live SDK/HTTP transport and routing evaluation are not implemented yet.
 
 ## Quickstart
 
@@ -16,7 +16,7 @@ uv run llm-router-eval status
 The status command uses no network or API keys:
 
 ```json
-{"application": "llm-router-eval", "evaluation": "not_implemented", "implementation": "offline_provider_foundation", "network": "not_required", "shared_modules": "offline_controller_available_live_transport_not_implemented", "version": "0.0.1"}
+{"application": "llm-router-eval", "data": "local_admission_controls_corpus_pending", "evaluation": "not_implemented", "implementation": "offline_provider_foundation", "network": "not_required", "shared_modules": "offline_controller_available_live_transport_not_implemented", "version": "0.0.1"}
 ```
 
 ## Architecture
@@ -26,6 +26,8 @@ A local Python CLI will collect responses, replay routing policies, score result
 ## Results and cost
 
 No evaluation has run. Model quality, cost, latency and savings are **not yet measured**. Prices, accounting scenarios and twelve provider foundation cases are explicitly synthetic controls, not independent heldout Gold or real provider captures. See the [provider contract](docs/provider-contracts.md) for strict replay, zero-dispatch and source/current provenance semantics.
+
+The [data contract](docs/data-contracts.md) separates routing inputs from private scoring data and describes exact-source admission, deterministic family splits and configuration seals. Ten tiny authored data controls exercise this plumbing. A licensed corpus, independent heldout Gold and human calibration remain pending.
 
 ## Limits and verification
 

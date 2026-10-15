@@ -24,6 +24,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "application": "llm-router-eval",
                 "version": __version__,
                 "implementation": "offline_provider_foundation",
+                "data": "local_admission_controls_corpus_pending",
                 "evaluation": "not_implemented",
                 "shared_modules": "offline_controller_available_live_transport_not_implemented",
                 "network": "not_required",
