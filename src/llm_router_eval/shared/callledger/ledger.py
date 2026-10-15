@@ -51,6 +51,21 @@ class ReuseAccounting(WireModel):
 
 
 @dataclass(frozen=True)
+class ChildCounters:
+    """Persisted observation only; never a dispatch lease or deadline renewal."""
+
+    allocation_id: str
+    operation_id: str
+    child_id: str
+    mode: str
+    operation_state: str
+    child_state: str
+    used_attempts: int
+    remaining_attempts: int
+    repairs_used: int
+
+
+@dataclass(frozen=True)
 class AdmissionView:
     """Read-only snapshot, never a dispatch authorization or an unexpired lease."""
 
@@ -386,6 +401,41 @@ class Ledger:
                 limits=limits,
                 request=request,
                 require_zero_dispatch=require_zero_dispatch,
+            )
+            self.connection.commit()
+            return result
+        except BaseException:
+            self.connection.rollback()
+            raise
+
+    def child_counters(self, allocation: Allocation, *, context: CallContext) -> ChildCounters:
+        """Read actual counters even after expiry/stop; validate scope without granting effects."""
+        context = CallContext.model_validate(_dump(context))
+        try:
+            self.connection.execute("BEGIN")
+            operation = self._operation(allocation)
+            child = self.connection.execute(
+                "SELECT * FROM children WHERE operation_id=? AND child_id=?",
+                (operation["id"], context.child_id),
+            ).fetchone()
+            if child is None:
+                raise LedgerError("child_unknown")
+            root, submitted = json.loads(operation["context"]), _dump(context)
+            for key in ["child_id", "span_id", "parent_span_id", "purpose"]:
+                root.pop(key, None)
+                submitted.pop(key, None)
+            if root != submitted or context.purpose != json.loads(child["definition"])["purpose"]:
+                raise LedgerError("context_mismatch")
+            result = ChildCounters(
+                allocation.allocation_id,
+                operation["id"],
+                context.child_id,
+                operation["mode"],
+                operation["state"],
+                child["state"],
+                child["used"],
+                child["remaining"],
+                child["repairs"],
             )
             self.connection.commit()
             return result

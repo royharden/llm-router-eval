@@ -7,7 +7,8 @@ import hashlib
 import math
 import time
 from collections.abc import Iterable, Mapping
-from dataclasses import dataclass, field
+from copy import deepcopy
+from dataclasses import dataclass, field, replace
 from decimal import Decimal, localcontext
 from email.utils import parsedate_to_datetime
 from types import MappingProxyType
@@ -46,6 +47,7 @@ from .models import (
     SafeError,
     SourceCaptureRef,
 )
+from .repair import GenerationRepairPolicy, build_generation_repair_request
 from .schema import validate_output
 
 
@@ -239,8 +241,32 @@ class Provider:
         context: CallContext,
         limits: Limits,
         allocation: Allocation,
+        generation_repair: GenerationRepairPolicy | None = None,
+        content_validator=None,
     ) -> Result:
         started = self.clock()
+        repair_request = None
+        if generation_repair is not None:
+            try:
+                generation_repair = GenerationRepairPolicy.model_validate(
+                    generation_repair.model_dump(mode="json")
+                )
+                repair_request = build_generation_repair_request(request, generation_repair)
+                revision = None if content_validator is None else content_validator.revision_sha256
+                if (
+                    self.mode != "injected_simulation"
+                    or self.capture_mode != "disabled"
+                    or context.config_sha256 != generation_repair.bound_config_sha256
+                    or revision != generation_repair.content_validator_revision_sha256
+                    or (content_validator is not None and not callable(content_validator.validate))
+                    or limits.max_attempts_total != 2
+                    or limits.max_content_repairs != 1
+                ):
+                    raise ValueError("generation_repair_binding")
+            except (ValueError, AttributeError, TypeError):
+                raise ProviderError("generation_repair_binding") from None
+        elif content_validator is not None:
+            raise ProviderError("generation_repair_binding")
         prepared, evidence, view = self._bound(
             request,
             purpose=purpose,
@@ -250,6 +276,28 @@ class Provider:
             limits=limits,
             allocation=allocation,
         )
+        repair_prepared = repair_evidence = None
+        if repair_request is not None:
+            # Both exact requests must already be trusted and fit the funded child.
+            repair_prepared, repair_evidence, _ = self._bound(
+                repair_request,
+                purpose=purpose,
+                ledger=ledger,
+                budget=budget,
+                context=context,
+                limits=limits,
+                allocation=allocation,
+            )
+            if (
+                view.operation_state != "pending"
+                or view.child_state != "pending"
+                or view.used_attempts != 0
+                or view.remaining_attempts != 2
+                or view.max_attempts != 2
+                or view.max_repairs != 1
+                or view.repairs_used != 0
+            ):
+                raise ProviderError("generation_repair_fresh_child")
         if self.mode != "injected_simulation":
             return self._reuse(
                 prepared,
@@ -282,6 +330,9 @@ class Provider:
             context=context,
             limits=limits,
             allocation=allocation,
+            repair_prepared=repair_prepared,
+            repair_evidence=repair_evidence,
+            content_validator=content_validator,
         )
 
     def complete(
@@ -300,6 +351,8 @@ class Provider:
         stream: bool = False,
         reasoning_effort: str | None = None,
         temperature: float | None = None,
+        generation_repair: GenerationRepairPolicy | None = None,
+        content_validator=None,
     ) -> Result:
         request = GenerateRequest.model_validate(
             dict(
@@ -322,6 +375,8 @@ class Provider:
             context=context,
             limits=limits,
             allocation=allocation,
+            generation_repair=generation_repair,
+            content_validator=content_validator,
         )
 
     def _reuse(self, prepared, evidence, view, *, started, ledger, context, limits, allocation):
@@ -481,7 +536,23 @@ class Provider:
 
         return datetime.now(UTC)
 
-    def _injected(self, prepared, evidence, *, started, ledger, context, limits, allocation):
+    def _injected(
+        self,
+        prepared,
+        evidence,
+        *,
+        started,
+        ledger,
+        context,
+        limits,
+        allocation,
+        repair_prepared=None,
+        repair_evidence=None,
+        content_validator=None,
+    ):
+        logical_request = prepared.request
+        repair_enabled = repair_prepared is not None
+        content_repair = False
         attempts = []
         usages = []
         costs = []
@@ -503,7 +574,11 @@ class Provider:
                 raise ProviderError("attempt_limit")
             timeout = min(limits.attempt_timeout_s, view.deadline_remaining_s)
             attempt = ledger.begin_attempt(
-                allocation, context=context, request=evidence, caller_limits=limits
+                allocation,
+                context=context,
+                request=evidence,
+                caller_limits=limits,
+                content_repair=content_repair,
             )
             attempts.append(attempt)
             try:
@@ -523,6 +598,10 @@ class Provider:
             call_started = self.clock()
             reply = None
             retryable = False
+            repairable = False
+            if repair_enabled:
+                # A later missing body cannot be attributed to the prior physical request.
+                last_body = None
             last_error_code = None
             try:
                 reply = self.transport.send(
@@ -559,6 +638,20 @@ class Provider:
                             config=self.config,
                             max_bytes=limits.max_response_bytes,
                         )
+                        if repair_enabled and outcome.status == "invalid_output":
+                            # Decode the same envelope without schema checking only to
+                            # distinguish actual generated text from malformed envelopes.
+                            text_view = replace(
+                                prepared,
+                                request=prepared.request.model_copy(update={"output_schema": None}),
+                            )
+                            unvalidated = decode_outcome(
+                                reply.body,
+                                prepared=text_view,
+                                config=self.config,
+                                max_bytes=limits.max_response_bytes,
+                            )
+                            repairable = unvalidated.status == "ok"
                     except (ValueError, UnicodeError):
                         outcome = Outcome(
                             "invalid_output", None, normalize_usage(raw, self.config.flavor), raw
@@ -589,6 +682,7 @@ class Provider:
                 and outcome.model_reported
                 not in self.config.models[prepared.request.model].reported_models
             ):
+                repairable = False
                 outcome = Outcome(
                     "invalid_output",
                     outcome.model_reported,
@@ -616,6 +710,20 @@ class Provider:
                 )
                 first_kind = "unavailable"
                 first_ms = None
+                repairable = False
+            if repair_enabled and outcome.status == "ok" and content_validator is not None:
+                try:
+                    accepted = content_validator.validate(deepcopy(outcome.parsed))
+                    if type(accepted) is not bool:
+                        raise ValueError("invalid_validator_result")
+                    if not accepted:
+                        repairable = True
+                        outcome = replace(outcome, status="invalid_output", text=None, parsed=None)
+                except Exception:
+                    repairable = False
+                    last_error_code = "invalid_output"
+                    outcome = replace(outcome, status="invalid_output", text=None, parsed=None)
+                elapsed = max((self.clock() - call_started) * 1000, 0)
             if elapsed > timeout * 1000:
                 outcome = Outcome(
                     "deadline_exceeded",
@@ -624,6 +732,7 @@ class Provider:
                     outcome.usage_raw,
                 )
                 retryable = False
+                repairable = False
             metadata = self._metadata(
                 outcome,
                 context=context,
@@ -646,6 +755,24 @@ class Provider:
                     outcome.usage_raw,
                 )
                 retryable = False
+                repairable = False
+            if repairable and not content_repair:
+                try:
+                    current = ledger.validate_allocation(
+                        allocation, context=context, limits=limits, request=repair_evidence
+                    )
+                    can_repair = (
+                        current.used_attempts < current.max_attempts
+                        and current.remaining_attempts > 0
+                        and current.repairs_used < current.max_repairs
+                        and ledger.retry_fits(allocation, retry_after_s=0)
+                    )
+                except ValueError:
+                    can_repair = False
+                if can_repair:
+                    prepared, evidence = repair_prepared, repair_evidence
+                    content_repair = True
+                    continue
             if retryable:
                 try:
                     delay = self._retry_delay(reply.headers, used=view.used_attempts + 1)
@@ -737,4 +864,4 @@ class Provider:
             first_output_ms=first_ms,
             first_output_kind=first_kind,
             current_external_cost_usd="0",
-        ).validate_for(prepared.request)
+        ).validate_for(logical_request)
