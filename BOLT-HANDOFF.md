@@ -1,17 +1,20 @@
 # Bolt handoff
 
-Status: **local offline provider, data, routing and anchored scoring foundation / hosting specification only**. No runnable browser app or backend provisioning inventory exists yet.
+Status: local Python evaluation core with an unfinished CLI/report workflow. Development is paused; see [development status](DEVELOPMENT-STATUS.md). This is an inspection and portability handoff, not a provisioning or hosting acceptance record.
 
-| Resource | Requirement |
+| Resource | Actual requirement |
 |---|---|
-| Hosted database / migrations | Not required for the local CLI |
-| Functions / auth / buckets / Realtime | Not required |
-| Provider secrets in Bolt | Not required |
-| Python evaluation runtime | Local Python 3.12; outside a static web preview |
-| Static viewer | Optional later packaging; not implemented |
-| Safe result JSON and charts | Planned; not generated yet |
-| Remote repository / import / publication | Requires an actual grant; absent |
+| Runtime | Python 3.12 with locked dependencies managed by uv |
+| Local accounting/campaign state | Explicit local SQLite files; no hosted database required |
+| Database migrations, edge functions, auth, buckets, Realtime | Not required by the current local core |
+| Provider credentials in Bolt | Not required by the keyless authored controls; live transport is unimplemented |
+| Browser frontend | Optional later safe-result viewer; not implemented |
+| Safe result assets | JSON/Markdown prototype in uncommitted WIP, not a verified finished export workflow |
+| Scientific charts | Not rendered; plotting dependency/runtime verification pending |
+| Cloud provisioning, remote import, publication | Not performed or established |
 
-The local package uses uv sync --frozen and uv run llm-router-eval status. This reports the offline foundation without keys. It does not execute evaluation. See docs/INTERFACE.md, docs/provider-contracts.md and src/llm_router_eval/shared/callledger/README.md for actual implemented boundaries.
+From the repository, `uv sync --frozen` prepares the locked environment and `uv run llm-router-eval status` inspects local capabilities without provider keys. The provisional explicit-input evaluation commands are described as WIP in the development status; do not treat them as a completed hosted application.
 
-A future viewer may import generated safe result assets. Importing this Python repository does not provision a Python worker, SQLite ledger or API credentials. A provisioning prompt will be prepared only after actual implemented resources and readiness evidence exist. Current action: inspection/preparation only.
+The MVP is a local CLI/evaluation core. There is no forced web frontend or cloud database: a Bolt static preview cannot execute its Python worker or durable local SQLite accounting. This is an explicit portability boundary. A later viewer could consume allowlisted safe aggregate assets after the export workflow is verified. No provider key belongs in frontend code.
+
+If preparing a future Bolt import, keep the local Python core separate and request only a static safe-artifact viewer when actual assets exist. Provision no cloud database, worker, secrets or functions from this document. Real model execution, corpus/reference admission, independent review and publication retain their separate prerequisites.

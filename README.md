@@ -2,7 +2,7 @@
 
 This project will compare routing policies on a fixed prompt set using quality, provider-reported cost and latency. It will also export reusable accounting, provider and routing modules.
 
-Current implementation: **offline provider, data, routing and anchored scoring foundations**. These include SQLite/Decimal accounting, strict fixture lookup, family splits/seals, seven prompt-only routing variants and deterministic scoring. Live SDK/HTTP transport, canonical-statistics/rubric integration and a complete evaluation runner remain pending.
+Current committed implementation includes offline provider/accounting, local data admission, seven routing policies, deterministic scoring, scope-bound campaign recovery and private adapters to the canonical fixed-population comparison engine. A subsequent CLI/report workflow is **unfinished WIP**. Development is paused; see [development status](DEVELOPMENT-STATUS.md) for completed work, outstanding tasks and [lessons](LESSONS.md).
 
 ## Quickstart
 
@@ -13,11 +13,7 @@ uv sync --frozen
 uv run llm-router-eval status
 ```
 
-The status command uses no network or API keys:
-
-```json
-{"application": "llm-router-eval", "data": "local_admission_controls_corpus_pending", "evaluation": "not_implemented", "implementation": "offline_scoring_foundation", "network": "not_required", "routing": "seven_variants_caller_callbacks", "scoring": "anchored_deterministic_rubric_unvalidated", "shared_modules": "offline_controller_available_live_transport_not_implemented", "version": "0.0.1"}
-```
+The status command uses no network or API keys. The working tree contains provisional `eval`/`demo` commands, but their first focused workflow run had one failing malformed-response control. They are not a completed CLI release; exact evaluated command examples will follow successful verification.
 
 ## Architecture
 
@@ -25,13 +21,13 @@ A local Python CLI will collect responses, replay routing policies, score result
 
 ## Results and cost
 
-No evaluation has run. Model quality, cost, latency and savings are **not yet measured**. Prices, accounting scenarios and twelve provider foundation cases are explicitly synthetic controls, not independent heldout Gold or real provider captures. See the [provider contract](docs/provider-contracts.md) for strict replay, zero-dispatch and source/current provenance semantics.
+Authored offline controls have executed through the real local Provider/Ledger and canonical comparison paths. Model quality, real cost, inference latency and savings are **not measured**. Prices, accounting scenarios and twelve provider foundation cases are explicitly synthetic controls, not independent heldout Gold or real provider captures. See the [provider contract](docs/provider-contracts.md) for strict replay, zero-dispatch and source/current provenance semantics.
 
 The [data contract](docs/data-contracts.md) separates routing inputs from private scoring data and describes exact-source admission, deterministic family splits and configuration seals. Ten tiny authored data controls exercise this plumbing. A licensed corpus, independent heldout Gold and human calibration remain pending.
 
 The [routing contract](docs/routing-contracts.md) covers the two fixed baselines, rules, classifier, Jev gate and both cascade checkers. Cascades escalate every cheap answer without trusted matching calibration. Current tests use authored callback results; no real calibration or quality claim is implied.
 
-The [scoring contract](docs/scoring-contracts.md) describes anchored numeric/MC/code/exact scoring, visible assigned failures/unscored denominators, blank label templates and calibration domain controls. Generic statistics await verified canonical S2 code; no duplicate statistics library or real human/judge calibration is included.
+The [scoring contract](docs/scoring-contracts.md) describes anchored numeric/MC/code/exact scoring, visible assigned failures/unscored denominators, blank label templates and calibration domain controls. The canonical statistics package and adapter are implemented; real human/judge calibration and rubric quality remain unvalidated.
 
 ## Limits and verification
 
