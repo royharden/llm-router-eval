@@ -31,3 +31,9 @@ Separate isolated SDK dependency setup downloaded/verified the exact packages an
 5. Run separately authorized real integration/evaluations and obtain independent finished-app review before any model-quality, full-app, hosting or release acceptance claim.
 
 No server, Docker stack, cloud resources, hosted database, migrations or edge functions are needed for the current local Python core. See [Bolt handoff](BOLT-HANDOFF.md), [limitations](docs/LIMITATIONS.md) and [lessons](LESSONS.md).
+
+## Input-validation review correction
+
+Independent review of the first local checkpoint found that `request: null` in a tiny vector fixture escaped validation and caused an internal traceback. The successor checks request-object and row-key/text types before dictionary construction or dereference. Malformed input returns a closed exit-2 JSON refusal before ledger/evaluation construction and output writes. The original finding and candidate remain preserved; this does not retroactively approve them.
+
+The regression failed before the fix. Afterward, 85 focused runner/bootstrap checks passed, including null/non-object requests, non-string/unhashable task IDs, state-preservation guards and a real subprocess refusal. The earlier 565-test/15-detached result belongs to the first source checkpoint; it is not a claim that the full suite reran after this correction. Successor portability and independent recheck bind their own frozen candidate.

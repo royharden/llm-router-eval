@@ -13,3 +13,5 @@
 
 - Report source-cost completeness separately from current charge: failure before retaining a full matrix must not turn unavailable source cost into a zero total. Zero passes leaves cost-per-pass undefined, and long valid decimal values must retain their cents in aggregate reports.
 - Exercise the actual local decoder when demonstrating malformed structured wire. A manually authored failure status can test downstream fallback but does not prove the decoding boundary ran.
+
+- Validate JSON fixture row value types before dictionary-key hashing or request dereference. A null/non-object request or non-string task ID must produce a closed CLI refusal before ledger construction or any output/state write; avoid masking the ingress defect with a broad exception catch.

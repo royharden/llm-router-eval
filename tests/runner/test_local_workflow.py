@@ -1,5 +1,6 @@
 """Runnable authored workflow, output privacy and honest refusal regressions."""
 
+import hashlib
 import json
 import os
 import socket
@@ -9,6 +10,7 @@ from pathlib import Path
 
 import pytest
 
+from llm_router_eval.cli import main
 from llm_router_eval.data.corpus import canonical_bytes, digest
 from llm_router_eval.evaluation import engine, workflow
 from llm_router_eval.evaluation.report import cost_summary, render_json, render_markdown
@@ -156,6 +158,100 @@ def test_existing_output_and_bad_input_refuse_without_overwrite(tmp_path):
     with pytest.raises(ValueError):
         run_offline(malformed, VECTORS, target)
     assert not target.exists()
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("request", None),
+        ("request", []),
+        ("request", "not-an-object"),
+        ("request", 7),
+        ("request", True),
+        ("task_id", []),
+        ("task_id", {}),
+        ("task_id", None),
+        ("task_id", 7),
+    ],
+)
+def test_malformed_vector_types_refuse_before_any_state(
+    tmp_path, field, value, monkeypatch, capsys, request
+):
+    """what_bug_this_catches: S3-RV2-001 null requests or unhashable keys crash the CLI."""
+    request.node.user_properties.append(
+        (
+            "what_bug_this_catches",
+            "S3-RV2-001: validate JSON request/key types before dereference or hashing; "
+            "clean CLI refusal must precede ledger/comparison construction and all output writes.",
+        )
+    )
+    vectors = json.loads(VECTORS.read_bytes())
+    vectors["fixtures"][0][field] = value
+    path = tmp_path / "invalid-vectors.json"
+    path.write_bytes(canonical_bytes(vectors))
+    sentinel = tmp_path / "keep"
+    sentinel.write_bytes(b"unchanged")
+    before = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in tmp_path.iterdir()}
+
+    def no_state(*a, **kw):
+        pytest.fail("Malformed ingress reached state/evaluation construction")
+
+    monkeypatch.setattr(workflow, "Ledger", no_state)
+    monkeypatch.setattr(workflow, "run_comparison", no_state)
+    result = main(
+        [
+            "eval",
+            "--tasks",
+            str(TASKS),
+            "--vectors",
+            str(path),
+            "--out",
+            str(tmp_path / "never-created"),
+        ]
+    )
+    captured = capsys.readouterr()
+    assert result == 2 and json.loads(captured.out) == dict(
+        status="refused", reason="invalid_input_or_existing_output"
+    )
+    assert captured.err == ""
+    assert before == {
+        p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in tmp_path.iterdir()
+    }
+
+
+def test_null_vector_request_process_returns_closed_refusal(tmp_path):
+    """what_bug_this_catches: __main__ leaks a traceback/exit1 for request:null."""
+    vectors = json.loads(VECTORS.read_bytes())
+    vectors["fixtures"][0]["request"] = None
+    path = tmp_path / "null-request.json"
+    path.write_bytes(canonical_bytes(vectors))
+    before = path.read_bytes()
+    output = tmp_path / "never-created"
+    env = {
+        k: os.environ[k] for k in ["SystemRoot", "WINDIR", "PATH", "TEMP", "TMP"] if k in os.environ
+    }
+    env.update(PYTHONDONTWRITEBYTECODE="1", PYTHONPATH=str(ROOT))
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-B",
+            "-m",
+            "llm_router_eval",
+            "eval",
+            "--tasks",
+            str(TASKS),
+            "--vectors",
+            str(path),
+            "--out",
+            str(output),
+        ],
+        cwd=tmp_path,
+        env=env,
+        capture_output=True,
+        timeout=30,
+    )
+    assert result.returncode == 2 and json.loads(result.stdout)["status"] == "refused"
+    assert result.stderr == b"" and not output.exists() and path.read_bytes() == before
 
 
 def test_raw_private_input_canary_never_enters_safe_reports(tmp_path):

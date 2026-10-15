@@ -106,7 +106,11 @@ def build_control_book(
         not isinstance(rows, list)
         or not 1 <= len(rows) <= 300
         or any(
-            not isinstance(r, dict) or set(r) != {"task_id", "request", "authored_text"}
+            not isinstance(r, dict)
+            or set(r) != {"task_id", "request", "authored_text"}
+            or type(r["task_id"]) is not str
+            or not isinstance(r["request"], dict)
+            or type(r["authored_text"]) is not str
             for r in rows
         )
     ):
