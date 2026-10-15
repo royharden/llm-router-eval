@@ -24,7 +24,7 @@ Separate isolated SDK dependency setup downloaded/verified the exact packages an
 
 ## Outstanding
 
-1. Obtain substantive independent review of the new local workflow; local regression/portability checks have passed. Do not treat an author's tests as independent acceptance.
+1. The first local workflow and input-validation successor received independent accept-with-notes for their exact partial slice. New reporting changes remain review-pending. Finished-app acceptance and actual quality/integration gates remain open.
 2. Complete scientific chart rendering and any required broader reporting/reference rows, with actual plotting dependency/runtime evidence. Preserve unknown costs, source/current charge separation and replay timing limits. Optional viewer/telemetry remain deferred.
 3. Diagnose the bounded SDK source-probe timeout and transient environment snapshot mismatch before any SDK capability claim. Preserve previous failures and retained artifacts; no stale setup action is authorized by these docs. Live SDK transport, accounts/models/prices/input-billing and a separately bounded smoke run need their actual prerequisites.
 4. Acquire actual licensed corpus inputs, independent reference labels, human calibration anchors and heldout seals/history authority. Structural 300-row trust doubles do not establish these.
@@ -37,3 +37,9 @@ No server, Docker stack, cloud resources, hosted database, migrations or edge fu
 Independent review of the first local checkpoint found that `request: null` in a tiny vector fixture escaped validation and caused an internal traceback. The successor checks request-object and row-key/text types before dictionary construction or dereference. Malformed input returns a closed exit-2 JSON refusal before ledger/evaluation construction and output writes. The original finding and candidate remain preserved; this does not retroactively approve them.
 
 The regression failed before the fix. Afterward, 85 focused runner/bootstrap checks passed, including null/non-object requests, non-string/unhashable task IDs, state-preservation guards and a real subprocess refusal. The earlier 565-test/15-detached result belongs to the first source checkpoint; it is not a claim that the full suite reran after this correction. Successor portability and independent recheck bind their own frozen candidate.
+
+## Cohort reporting successor
+
+The deterministic aggregate now uses the same eligible cases for accuracy and source-cost consumption. All five present task kinds have fixed-population metrics and assigned/eligible/unscored/family counts; absent kinds and an empty deterministic cohort are explicit. Only closed kind labels and counts are exported. Canonical metric ports still own statistics, and grouping never triggers another observation or dispatch. Used unknown source costs remain null; a code-only rules route has zero model-source consumption with host-resource cost explicitly unknown. Scientific chart rendering remains pending.
+
+The first six-control run retained one failed overbroad test assumption about code-only model costs. The corrected control distinguishes used unknown model sources from no consumed model observations; all six focused controls then passed. Final candidate receipts carry the subsequent full-suite and exact-Git relocation results.

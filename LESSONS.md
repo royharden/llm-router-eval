@@ -15,3 +15,5 @@
 - Exercise the actual local decoder when demonstrating malformed structured wire. A manually authored failure status can test downstream fallback but does not prove the decoding boundary ran.
 
 - Validate JSON fixture row value types before dictionary-key hashing or request dereference. A null/non-object request or non-string task ID must produce a closed CLI refusal before ledger construction or any output/state write; avoid masking the ingress defect with a broad exception catch.
+
+- Pair cost and accuracy on the same declared population before comparison. Keep all-assigned source consumption separate from deterministic-eligible cohorts, expose absent/empty populations, and retain unknown cost bounds. Zero consumed model observations is a model-source cost of zero; it does not establish zero host-resource cost. Restrict public grouping to closed task kinds and counts rather than source, task or family identifiers.
