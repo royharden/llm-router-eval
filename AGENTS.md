@@ -1,12 +1,12 @@
 # Product agent instructions
 
-Version 1.3 — 2026-10-14: offline provider/controller foundation.
+Version 1.4 — 2026-10-14: offline provider, data and routing foundations.
 
 ## Commands and scope
 
 Use Python 3.12 and uv from this Git root. Run uv sync --frozen, uv run ruff check ., uv run ruff format --check ., and uv run pytest -m "not live". The installed keyless entrypoint is llm-router-eval status.
 
-Current product stage includes wire models, schemas, SQLite/Decimal accounting and an offline provider controller with strict fixtures and injected payload contracts. Live SDK/HTTP transport, routing and evaluation remain unavailable. Do not report a routing benchmark, live provider integration, price/token-bound proof, consumer vendoring or live result until the corresponding implementation and execution evidence exist.
+Current product stage includes wire models/schemas, SQLite/Decimal accounting, an offline provider controller, local data-admission/split/seal validation and seven prompt-only routing variants using caller callbacks. Live SDK/HTTP transport, a complete evaluation runner and scoring remain unavailable. Do not report a routing benchmark, live provider integration, price/token-bound proof, consumer vendoring or live result until the corresponding implementation and execution evidence exist.
 
 ## Development policy
 
@@ -24,10 +24,11 @@ Canonical shared skills are referenced through the enclosing workspace/global in
 - Keyless checks cannot use network or real credentials. Live tests require actual bounded provider/price/capability authorization.
 - No remote publication, resources or independent acceptance is implied by green local offline tests.
 
-The shared offline foundation is implemented. Live provider transport, routing, an evaluation corpus and independent fixture Gold remain unavailable. The twelve authored foundation cases are synthetic contract controls, not independent evaluation Gold. Preserve the corresponding source/data/resource gates before further implementation.
+The shared offline foundation and routing policy source are implemented. Live provider transport, the Provider/Ledger-to-policy evaluation runner, licensed corpus, calibration and independent fixture Gold remain unavailable. The twelve foundation cases and ten data controls are synthetic implementation controls, not independent evaluation Gold. Preserve the corresponding source/data/resource gates before further implementation.
 
 ## Changelog
 
+- 1.4: aligned inventory with local data plumbing and callback-based routing; real corpus, calibration and evaluation remain pending.
 - 1.3: aligned stage inventory with offline controller and explicit strict-fixture/injected contracts; no live transport or evaluation claim.
 - 1.2: aligned stage metadata with the local accounting/pricing foundation; provider/controller transport and evaluation remain unavailable.
 - 1.1: corrected WP01 models-only stage and schema descriptions; execution and evaluation remain unavailable.

@@ -1,6 +1,6 @@
 # Bolt handoff
 
-Status: **local offline provider and data-admission foundation / hosting specification only**. No runnable browser app or backend provisioning inventory exists yet.
+Status: **local offline provider, data and routing foundation / hosting specification only**. No runnable browser app or backend provisioning inventory exists yet.
 
 | Resource | Requirement |
 |---|---|
