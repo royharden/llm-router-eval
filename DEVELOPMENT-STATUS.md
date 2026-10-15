@@ -1,4 +1,4 @@
-# Development status â€” paused 2026-10-15
+# Development status — local journey checkpoint, 2026-10-15
 
 Local construction has resumed from the preserved checkpoint. The authored CLI now runs the normal comparison and meaningful refusal/error journeys. This checkpoint does not establish full-app acceptance, real model integration or independent evaluation.
 
@@ -10,13 +10,13 @@ Local construction has resumed from the preserved checkpoint. The authored CLI n
 - The canonical statistics/comparison package is vendored with its licence and unchanged runtime source. App adapters use its fixed-ID comparison and metric ports rather than a competing generic statistics engine.
 - Six-cell observation matrices are declared before lookup and shared across seven policy executions. Campaign metadata supports scope-bound missing-only recovery with an explicit retained-result reader and canonical heldout-history admission. This does not create real heldout authority.
 - Private reference provenance and derived-population byte checks protect scoring labels from routing inputs. Missing, stale and disabled methods remain visible. A collection failure is not silently retried by later policies.
-- Last completed source checkpoint: 552 local tests and 16 detached controls passed, including exact Git source relocation. Lint, formatting, all 18 schema bytes and whitespace checks passed. These are source/control checks, not model-quality or finished-app acceptance.
+- The local journey candidate passed 565 local tests and 15 detached controls using exact Git source and a relocated CLI namespace. Lint, formatting, all 18 schema bytes and whitespace checks passed. This documentation records observed executable-source results; it does not establish model-quality or finished-app acceptance.
 
 ## Local workflow completion
 
 The inherited report/workflow/CLI prototype now executes explicit authored inputs into a fresh directory, produces aggregate JSON/Markdown plus actual SQLite accounting, and preserves existing output on refusal. The malformed-response defect is corrected at the existing decoder boundary: authored malformed wire becomes an `invalid_output` capture rather than an invalid successful fixture. Seven policies consume the complete matrix without a hidden retry or live dispatch.
 
-Actual local normal, malformed, simulated funding rejection and no-overwrite journeys have executed with positive network/SDK-import guards from an empty working directory. Focused workflow/CLI controls passed before the final precision/guard additions; final candidate checks are recorded separately after those additions. The earlier nine-pass/one-failure prototype run remains a failure record and is not relabelled.
+Actual local normal, malformed, simulated funding rejection and no-overwrite journeys have executed with positive network/SDK-import guards from an empty working directory. Final executable-source verification passed all 565 local tests and 15 detached controls, including the precision and denial-guard additions. The earlier nine-pass/one-failure prototype run remains a failure record and is not relabelled.
 
 Reports retain incomplete collection as unknown source-cost totals, use exact Decimal subtotals and an undefined cost-per-pass at zero passes, keep rubric cases unscored, and distinguish local timing from model latency. Canonical statistics/comparison source remains unchanged. See [README](README.md) for reproducible commands.
 
@@ -24,7 +24,7 @@ Separate isolated SDK dependency setup downloaded/verified the exact packages an
 
 ## Outstanding
 
-1. Complete final candidate regression/portability checks and substantive independent review of the new local workflow. Do not treat an author's tests as independent acceptance.
+1. Obtain substantive independent review of the new local workflow; local regression/portability checks have passed. Do not treat an author's tests as independent acceptance.
 2. Complete scientific chart rendering and any required broader reporting/reference rows, with actual plotting dependency/runtime evidence. Preserve unknown costs, source/current charge separation and replay timing limits. Optional viewer/telemetry remain deferred.
 3. Diagnose the bounded SDK source-probe timeout and transient environment snapshot mismatch before any SDK capability claim. Preserve previous failures and retained artifacts; no stale setup action is authorized by these docs. Live SDK transport, accounts/models/prices/input-billing and a separately bounded smoke run need their actual prerequisites.
 4. Acquire actual licensed corpus inputs, independent reference labels, human calibration anchors and heldout seals/history authority. Structural 300-row trust doubles do not establish these.
