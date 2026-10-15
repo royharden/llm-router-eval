@@ -1,20 +1,22 @@
 # Bolt handoff
 
-Status: local Python evaluation core with an unfinished CLI/report workflow. Development is paused; see [development status](DEVELOPMENT-STATUS.md). This is an inspection and portability handoff, not a provisioning or hosting acceptance record.
+The implemented runtime is a **local Python 3.12 CLI**, with SQLite accounting and allowlisted JSON/Markdown exports. It is suitable for local authored, zero-dispatch demonstrations. This is not hosted execution or finished-app acceptance.
 
 | Resource | Actual requirement |
 |---|---|
-| Runtime | Python 3.12 with locked dependencies managed by uv |
-| Local accounting/campaign state | Explicit local SQLite files; no hosted database required |
-| Database migrations, edge functions, auth, buckets, Realtime | Not required by the current local core |
-| Provider credentials in Bolt | Not required by the keyless authored controls; live transport is unimplemented |
-| Browser frontend | Optional later safe-result viewer; not implemented |
-| Safe result assets | JSON/Markdown prototype in uncommitted WIP, not a verified finished export workflow |
-| Scientific charts | Not rendered; plotting dependency/runtime verification pending |
-| Cloud provisioning, remote import, publication | Not performed or established |
+| Runtime/dependencies | Python 3.12, uv lock, Pydantic; no SDK is needed for the authored path |
+| Local state | Explicit new output directory with SQLite accounting; optional campaign metadata remains caller-scoped |
+| Hosted database/migrations/edge functions/auth/buckets/Realtime | Not required by this local core |
+| Provider credentials | Not read by authored controls; live SDK transport remains unimplemented |
+| Browser frontend | Optional later static safe-result viewer; not implemented |
+| Safe assets | Aggregate `report.json` and `report.md`; no raw prompt/answer/rubric archive |
+| Scientific charts | Rendering/dependency verification pending |
+| Cloud provisioning/remote import/publication | Not performed or authorized by this document |
 
-From the repository, `uv sync --frozen` prepares the locked environment and `uv run llm-router-eval status` inspects local capabilities without provider keys. The provisional explicit-input evaluation commands are described as WIP in the development status; do not treat them as a completed hosted application.
+Use the exact local normal/refusal/demo commands in [README](README.md). Reports retain synthetic provenance, unscored rubric coverage, unknown cost and local-only timing limitations. A simulated funding refusal is not a paid model response.
 
-The MVP is a local CLI/evaluation core. There is no forced web frontend or cloud database: a Bolt static preview cannot execute its Python worker or durable local SQLite accounting. This is an explicit portability boundary. A later viewer could consume allowlisted safe aggregate assets after the export workflow is verified. No provider key belongs in frontend code.
+MVP-first portability boundary: a Bolt static preview cannot run the Python worker or durable SQLite accounting. Keep the CLI local; do not add an unnecessary hosted database or Python service to claim compatibility. A future static viewer can consume only verified safe aggregates. No provider key belongs in frontend code.
 
-If preparing a future Bolt import, keep the local Python core separate and request only a static safe-artifact viewer when actual assets exist. Provision no cloud database, worker, secrets or functions from this document. Real model execution, corpus/reference admission, independent review and publication retain their separate prerequisites.
+Future Bolt preparation prompt, when an actual viewer is requested: “Create a static viewer for supplied allowlisted routing aggregate JSON. Preserve the synthetic watermark, assigned/eligible/unscored coverage, unknown costs and local-only timing labels. Do not provision a database, Python worker, functions, auth or provider secrets. Do not infer model quality or live execution from fixture data.” No provisioning is performed by this handoff.
+
+See [development status](DEVELOPMENT-STATUS.md) for missing integration/evaluation and independent review gates. The earlier isolated SDK setup and probe failures remain failures; they are not a working SDK integration.

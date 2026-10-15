@@ -10,3 +10,6 @@
 - A malformed successful fixture may be refused before policy execution. Model the explicitly failed capture honestly when demonstrating downstream refusal/escalation, and report partial collection instead of inventing a complete matrix.
 - Verification wrappers must bind the correct candidate and output destination before writing receipts. Retain incorrectly attributed or timed-out attempts and exclude them from acceptance; do not relabel them as passing evidence.
 - Prefer a complete small local workflow and honest portability handoff before adding cloud/UI dependencies. Source tests do not replace independent app review or actual corpus/model evaluation.
+
+- Report source-cost completeness separately from current charge: failure before retaining a full matrix must not turn unavailable source cost into a zero total. Zero passes leaves cost-per-pass undefined, and long valid decimal values must retain their cents in aggregate reports.
+- Exercise the actual local decoder when demonstrating malformed structured wire. A manually authored failure status can test downstream fallback but does not prove the decoding boundary ran.

@@ -1,46 +1,56 @@
 # LLM Router Eval
 
-This project will compare routing policies on a fixed prompt set using quality, provider-reported cost and latency. It will also export reusable accounting, provider and routing modules.
+Run a local comparison of seven routing policies on ten authored controls, with SQLite accounting and aggregate JSON/Markdown reports. The default path makes zero live model calls. Real model quality, provider prices, inference latency and savings remain unmeasured.
 
-Current committed implementation includes offline provider/accounting, local data admission, seven routing policies, deterministic scoring, scope-bound campaign recovery and private adapters to the canonical fixed-population comparison engine. A subsequent CLI/report workflow is **unfinished WIP**. Development is paused; see [development status](DEVELOPMENT-STATUS.md) for completed work, outstanding tasks and [lessons](LESSONS.md).
+## Run locally
 
-## Quickstart
-
-With Python 3.12 and uv:
+With Python 3.12 and uv, prepare the locked environment and inspect capabilities:
 
 ```sh
 uv sync --frozen
-uv run llm-router-eval status
+uv run --frozen python -m llm_router_eval status
 ```
 
-The status command uses no network or API keys. The working tree contains provisional `eval`/`demo` commands, but their first focused workflow run had one failing malformed-response control. They are not a completed CLI release; exact evaluated command examples will follow successful verification.
-
-## Architecture
-
-A local Python CLI will collect responses, replay routing policies, score results and generate a quality-versus-cost chart. The current SQLite ledger owns durable accounting events; JSONL is a derived export. See the [public interface](docs/INTERFACE.md) and [ledger/pricing contract](src/llm_router_eval/shared/callledger/README.md) for validation, evidence and copy boundaries.
-
-## Results and cost
-
-Authored offline controls have executed through the real local Provider/Ledger and canonical comparison paths. Model quality, real cost, inference latency and savings are **not measured**. Prices, accounting scenarios and twelve provider foundation cases are explicitly synthetic controls, not independent heldout Gold or real provider captures. See the [provider contract](docs/provider-contracts.md) for strict replay, zero-dispatch and source/current provenance semantics.
-
-The [data contract](docs/data-contracts.md) separates routing inputs from private scoring data and describes exact-source admission, deterministic family splits and configuration seals. Ten tiny authored data controls exercise this plumbing. A licensed corpus, independent heldout Gold and human calibration remain pending.
-
-The [routing contract](docs/routing-contracts.md) covers the two fixed baselines, rules, classifier, Jev gate and both cascade checkers. Cascades escalate every cheap answer without trusted matching calibration. Current tests use authored callback results; no real calibration or quality claim is implied.
-
-The [scoring contract](docs/scoring-contracts.md) describes anchored numeric/MC/code/exact scoring, visible assigned failures/unscored denominators, blank label templates and calibration domain controls. The canonical statistics package and adapter are implemented; real human/judge calibration and rubric quality remain unvalidated.
-
-## Limits and verification
-
-See [limitations](docs/LIMITATIONS.md) and [Bolt handoff](BOLT-HANDOFF.md). The package is a local tool; importing it into a website builder does not run Python evaluation.
-
-Coding agents wrote this implementation. Synthetic offline tests cover actual controller-to-ledger calls, zero-quota fixture hits/misses, typed/structured contracts, caller-limit races/restarts, legacy-store migration, process-crash boundaries, pricing, bounded PNG buffers and privacy controls. They do not exercise a live provider or establish actual price/token proofs. Remote CI has not run; local evidence does not establish finished-app acceptance.
-
-## Development
+From the repository, run the committed authored task/vector inputs into a **new** output directory whose parent exists:
 
 ```sh
-uv run ruff check .
-uv run ruff format --check .
-uv run pytest -m "not live"
+uv run --frozen python -m llm_router_eval eval --tasks fixtures/implementation-controls/tasks.json --vectors fixtures/implementation-controls/requests.json --out ../router-demo-normal-001
 ```
 
-The repository is standalone. Agent coordination, plans, receipts and transcripts stay in the outer development shell.
+The output contains `accounting.sqlite3`, `report.json` and `report.md`. All seven policies run against one six-cell matrix per input. Eight deterministic cases are eligible; two rubric cases remain unscored. Reports distinguish the actual external charge of zero from invented source-cost controls. Those values are not real model prices or quality results.
+
+Reusing the same output path returns exit code 2 and a closed refusal, preserving the existing files. Input validation also refuses before output creation. No implicit dataset source, overwrite, payload archive, provider credentials or network is required.
+
+## Error and demonstration paths
+
+Use a different fresh output path for every command:
+
+```sh
+uv run --frozen python -m llm_router_eval demo --tasks fixtures/implementation-controls/tasks.json --vectors fixtures/implementation-controls/requests.json --out ../router-demo-malformed-001 --scenario malformed
+uv run --frozen python -m llm_router_eval demo --tasks fixtures/implementation-controls/tasks.json --vectors fixtures/implementation-controls/requests.json --out ../router-demo-budget-001 --scenario budget
+uv run --frozen python -m llm_router_eval demo --tasks fixtures/implementation-controls/tasks.json --vectors fixtures/implementation-controls/requests.json --out ../router-demo-unknown-001 --scenario unknown_cost
+```
+
+`malformed` decodes an authored invalid structured response through the actual local adapter, retains failed capture status and falls back to frontier fixtures without a hidden call. `budget` adds an actual ledger rejection using explicitly synthetic prices in simulation mode; it creates no paid provider Result. `unknown_cost` preserves null source-cost points and upper bounds, while actual external charge remains zero.
+
+`code`, `cheap` and `escalation` name observations of the same complete authored matrix: bounded local code executes, cheap answers are selected, and unvalidated cascade checkers escalate. These are construction demonstrations, not separately sampled model experiments.
+
+## Accounting, privacy and interpretation
+
+The SQLite/Decimal ledger owns funding and durable accounting. Policies use fresh public contexts and reuse the declared observations. Canonical fixed-population comparison retains missing/stale cases and explicitly not-run methods. Private scoring labels/rubrics do not enter routing requests or safe reports. Frozen population bytes and method configuration identities are checked before execution.
+
+Reports show assigned/eligible/unscored coverage, source status counts, collection completeness, separate collection and counterfactual consumption costs, exact cost-per-pass ratios and local lookup/policy timing counts with p50/p95. Incomplete or unknown source cost has no invented total or upper bound. Zero passes leaves cost-per-pass undefined. Local fixture lookup timing is not model latency or TTFT; a new execution produces new timing input. Re-rendering the same retained report is byte deterministic.
+
+See [evaluation contracts](docs/evaluation-contracts.md), [provider contracts](docs/provider-contracts.md), [data contracts](docs/data-contracts.md), [routing](docs/routing-contracts.md) and [scoring](docs/scoring-contracts.md). Reusable modules are under `src/llm_router_eval/shared`; the canonical vendored statistics engine retains its licence and source provenance.
+
+## Remaining work and verification
+
+See [development status](DEVELOPMENT-STATUS.md), [limitations](docs/LIMITATIONS.md), [lessons](LESSONS.md) and [Bolt handoff](BOLT-HANDOFF.md). Charts, real SDK transport, licensed corpus inputs, independent labels/calibration, controlled heldout evaluation and model-quality conclusions remain outstanding. Optional viewer and telemetry emitter are deferred. Independent finished-app review and release acceptance are separate from local checks.
+
+```sh
+uv run --frozen ruff check .
+uv run --frozen ruff format --check .
+uv run --frozen pytest -m "not live"
+```
+
+The repository runs standalone. Coordination, transcripts, plans and verification receipts stay outside the product repository. No cloud resources, remote CI, publication or provisioning are claimed.

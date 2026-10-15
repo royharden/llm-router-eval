@@ -1,6 +1,6 @@
-# Development status — paused 2026-10-15
+# Development status â€” paused 2026-10-15
 
-Development is paused. The last completed source checkpoint provides private domain references and canonical fixed-population comparison through the actual offline Provider/Ledger path. The subsequent local CLI/report workflow is unfinished working-tree material and is preserved for resumption.
+Local construction has resumed from the preserved checkpoint. The authored CLI now runs the normal comparison and meaningful refusal/error journeys. This checkpoint does not establish full-app acceptance, real model integration or independent evaluation.
 
 ## Finished
 
@@ -12,26 +12,22 @@ Development is paused. The last completed source checkpoint provides private dom
 - Private reference provenance and derived-population byte checks protect scoring labels from routing inputs. Missing, stale and disabled methods remain visible. A collection failure is not silently retried by later policies.
 - Last completed source checkpoint: 552 local tests and 16 detached controls passed, including exact Git source relocation. Lint, formatting, all 18 schema bytes and whitespace checks passed. These are source/control checks, not model-quality or finished-app acceptance.
 
-## Worked on, not finished
+## Local workflow completion
 
-The following files remain uncommitted WIP:
+The inherited report/workflow/CLI prototype now executes explicit authored inputs into a fresh directory, produces aggregate JSON/Markdown plus actual SQLite accounting, and preserves existing output on refusal. The malformed-response defect is corrected at the existing decoder boundary: authored malformed wire becomes an `invalid_output` capture rather than an invalid successful fixture. Seven policies consume the complete matrix without a hidden retry or live dispatch.
 
-- `src/llm_router_eval/evaluation/report.py`: safe aggregate JSON/Markdown assembly, canonical metrics and synthetic source-cost summaries.
-- `src/llm_router_eval/evaluation/workflow.py`: explicit-input authored DEV workflow, local SQLite output and small keyless scenarios.
-- `src/llm_router_eval/cli.py`: provisional `eval` and `demo` commands with explicit task/vector/output paths and refusal of an existing output directory.
-- `tests/runner/test_local_workflow.py` and `tests/bootstrap/test_installed_cli.py`: workflow and CLI regression controls.
+Actual local normal, malformed, simulated funding rejection and no-overwrite journeys have executed with positive network/SDK-import guards from an empty working directory. Focused workflow/CLI controls passed before the final precision/guard additions; final candidate checks are recorded separately after those additions. The earlier nine-pass/one-failure prototype run remains a failure record and is not relabelled.
 
-The first workflow run passed nine controls and failed the malformed structured-response scenario. That scenario provided an invalid successful fixture; collection refused it, so the expected complete source matrix was absent. Preserve the failed result and correct the boundary after resumption. Normal output, no-overwrite refusal, raw-input canary exclusion, unknown source cost and simulated funding rejection passed in that initial focused run. The entire WIP has not passed final regression, formatting or detached verification, and is not a completed CLI deliverable.
+Reports retain incomplete collection as unknown source-cost totals, use exact Decimal subtotals and an undefined cost-per-pass at zero passes, keep rubric cases unscored, and distinguish local timing from model latency. Canonical statistics/comparison source remains unchanged. See [README](README.md) for reproducible commands.
 
 Separate isolated SDK dependency setup downloaded/verified the exact packages and completed an offline install. Its bounded guarded source probe timed out. The environment snapshot comparison also reported a transient mismatch; a later read-only comparison matched the starting snapshot, which does not clear the earlier failure. No successful SDK import/capability, client construction, paid request, account access, pricing or transport behavior is established. The app's dependency lock was not changed.
 
 ## Outstanding
 
-1. After an explicit resume, correct the malformed-response scenario, finish/report incomplete collection semantics, and verify the existing WIP against a fresh pinned candidate.
-2. Finish the smallest runnable local CLI workflow, record an exact normal command and refusal demo, and update the public command examples from actual execution.
-3. Complete cost/coverage/timing tables and deterministic report rendering. Preserve unknown cost/usage and separate fixture lookup time from model latency. Chart rendering and optional viewer/telemetry remain pending.
-4. Diagnose the source-probe timeout and persist useful before/after environment differences. Reuse verified local artifacts only under a newly authorized bounded action; preserve previous failures. Implement actual SDK transport only with reviewed source behavior and separate execution authority.
-5. Acquire actual licensed corpus inputs, independent reference labels, human calibration anchors and heldout seals/history authority. None exists merely because structural 300-row trust doubles pass.
-6. Real model testing, benchmark quality/cost/latency conclusions and independent finished-app review require their actual prerequisites. There is no production, hosting, remote CI or release acceptance claim.
+1. Complete final candidate regression/portability checks and substantive independent review of the new local workflow. Do not treat an author's tests as independent acceptance.
+2. Complete scientific chart rendering and any required broader reporting/reference rows, with actual plotting dependency/runtime evidence. Preserve unknown costs, source/current charge separation and replay timing limits. Optional viewer/telemetry remain deferred.
+3. Diagnose the bounded SDK source-probe timeout and transient environment snapshot mismatch before any SDK capability claim. Preserve previous failures and retained artifacts; no stale setup action is authorized by these docs. Live SDK transport, accounts/models/prices/input-billing and a separately bounded smoke run need their actual prerequisites.
+4. Acquire actual licensed corpus inputs, independent reference labels, human calibration anchors and heldout seals/history authority. Structural 300-row trust doubles do not establish these.
+5. Run separately authorized real integration/evaluations and obtain independent finished-app review before any model-quality, full-app, hosting or release acceptance claim.
 
 No server, Docker stack, cloud resources, hosted database, migrations or edge functions are needed for the current local Python core. See [Bolt handoff](BOLT-HANDOFF.md), [limitations](docs/LIMITATIONS.md) and [lessons](LESSONS.md).

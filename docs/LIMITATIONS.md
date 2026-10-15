@@ -2,7 +2,7 @@
 
 The repository contains a keyless package, wire models/schemas, a SQLite/Decimal ledger, an offline controller and local data-admission/split/seal validation.
 
-- The local Provider/Ledger matrix runner, campaign recovery and canonical fixed-population comparison adapter are implemented. The subsequent report/CLI workflow is unfinished WIP with a failing malformed-response control. Live SDK/HTTP transport and validated rubric integration remain pending.
+- The local Provider/Ledger matrix runner, campaign recovery and canonical fixed-population comparison adapter are implemented. The authored report/CLI workflow now runs locally; malformed wire is recorded as a failed capture and falls back without hidden calls. Live SDK/HTTP transport and validated rubric integration remain pending.
 - No licensed 300-prompt corpus or human judge labels have been acquired.
 - No cost, quality, savings or latency result is measured.
 - The offline foundation is available as a source snapshot; actual consumer adoption requires its own grant, exact Git blob hashes, licences and moved tests.
@@ -20,4 +20,4 @@ See [INTERFACE.md](INTERFACE.md) and the [ledger contract](../src/llm_router_eva
 
 The [provider contract](provider-contracts.md) describes the deliberately bounded strict-schema subset and in-memory RGB/RGBA PNG checks. There is no filesystem image loader/general decoder or paid image-bound proof. Genuine SDK retries/timeouts/cancellation and broader schema support remain separate gates. Authored synthetic fixtures cannot become live observations by changing an origin/nonce flag.
 
-Development is paused. See [development status](../DEVELOPMENT-STATUS.md) for finished and uncommitted work, exact outstanding boundaries and [lessons](../LESSONS.md). Separate SDK dependency setup completed installation but its bounded source probe timed out; this is not successful SDK integration.
+The local authored workflow is construction evidence only. It accepts at most twelve synthetic DEV cases, not an actual benchmark/heldout population. Reports contain aggregate metrics/cost coverage and local timing; scientific charts and real-model execution are not implemented. See [development status](../DEVELOPMENT-STATUS.md) and [lessons](../LESSONS.md). Separate SDK dependency setup completed installation but its bounded source probe timed out; this is not successful SDK integration.

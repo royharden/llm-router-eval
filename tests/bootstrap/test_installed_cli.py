@@ -47,16 +47,16 @@ def test_installed_status_is_keyless_and_has_no_network(tmp_path):
     )
     assert result.returncode == 0, result.stderr
     status = json.loads(result.stdout)
-    assert status["implementation"] == "offline_scoring_foundation"
+    assert status["implementation"] == "authored_offline_evaluation"
     assert status["scoring"] == "anchored_deterministic_rubric_unvalidated"
     assert status["routing"] == "seven_variants_caller_callbacks"
     assert status["data"] == "local_admission_controls_corpus_pending"
-    assert status["evaluation"] == "not_implemented"
+    assert status["evaluation"] == "canonical_fixed_population_authored_DEV_only"
     assert status["shared_modules"] == "offline_controller_available_live_transport_not_implemented"
 
 
-def test_unimplemented_evaluation_command_is_rejected(tmp_path):
-    """what_bug_this_catches: advertising a benchmark that did not execute."""
+def test_evaluation_requires_explicit_inputs_and_output(tmp_path):
+    """what_bug_this_catches: implicit data source or evaluation without an output boundary."""
     result = subprocess.run(
         [sys.executable, "-m", "llm_router_eval", "eval"],
         cwd=tmp_path,
@@ -66,4 +66,4 @@ def test_unimplemented_evaluation_command_is_rejected(tmp_path):
         check=False,
     )
     assert result.returncode == 2
-    assert "invalid choice" in result.stderr
+    assert "required" in result.stderr and "--tasks" in result.stderr
