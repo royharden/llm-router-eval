@@ -24,7 +24,7 @@ Separate isolated SDK dependency setup downloaded/verified the exact packages an
 
 ## Outstanding
 
-1. The first local workflow and input-validation successor received independent accept-with-notes for their exact partial slice. New reporting changes remain review-pending. Finished-app acceptance and actual quality/integration gates remain open.
+1. The first local workflow and input-validation successor received independent accept-with-notes for their exact partial slice. The exact synthetic cohort-reporting successor also received independent accept-with-notes. New reference changes remain review-pending. Finished-app acceptance and actual quality/integration gates remain open.
 2. Complete scientific chart rendering and any required broader reporting/reference rows, with actual plotting dependency/runtime evidence. Preserve unknown costs, source/current charge separation and replay timing limits. Optional viewer/telemetry remain deferred.
 3. Diagnose the bounded SDK source-probe timeout and transient environment snapshot mismatch before any SDK capability claim. Preserve previous failures and retained artifacts; no stale setup action is authorized by these docs. Live SDK transport, accounts/models/prices/input-billing and a separately bounded smoke run need their actual prerequisites.
 4. Acquire actual licensed corpus inputs, independent reference labels, human calibration anchors and heldout seals/history authority. Structural 300-row trust doubles do not establish these.
@@ -43,3 +43,9 @@ The regression failed before the fix. Afterward, 85 focused runner/bootstrap che
 The deterministic aggregate now uses the same eligible cases for accuracy and source-cost consumption. All five present task kinds have fixed-population metrics and assigned/eligible/unscored/family counts; absent kinds and an empty deterministic cohort are explicit. Only closed kind labels and counts are exported. Canonical metric ports still own statistics, and grouping never triggers another observation or dispatch. Used unknown source costs remain null; a code-only rules route has zero model-source consumption with host-resource cost explicitly unknown. Scientific chart rendering remains pending.
 
 The first six-control run retained one failed overbroad test assumption about code-only model costs. The corrected control distinguishes used unknown model sources from no consumed model observations; all six focused controls then passed. Final candidate receipts carry the subsequent full-suite and exact-Git relocation results.
+
+## Report-only reference successor
+
+A fixed per-public-ID seed and three declared eligible-tier weight rows now select from retained cheap/frontier observations and actual bounded-code executions. All grid rows are published without tuning or winner selection. A separate cheapest-passing oracle uses completed private scoring after routing, selects the least-cost failure if no tier passes, and declines a minimum when an eligible observation or cost rank is missing. Canonical metric ports preserve the deterministic fixed population; reference rows carry missing counts and incomplete costs. Neither reference enters executable policies or invokes Provider/Ledger collection. Host cost and reference/model timing remain unmeasured.
+
+The first focused run exposed a strict tuple/JSON-copy mismatch; the next exposed an incorrect lookup of a local code span among model-source rows. Both failures remain preserved. Native tuple validation and zero model-source consumption for retained actual code execution correct those boundaries. Ten focused controls then passed; exact-candidate receipts record final broader verification. The random definition is detached from consumer-editable report dictionaries.

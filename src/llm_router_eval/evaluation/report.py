@@ -9,6 +9,7 @@ from ..shared.evalkit.reporting import metric_row, not_measured_row, public_aggr
 from ..shared.evalkit.statistics import accuracy
 from .domain import AnswerAdapter
 from .matrix import CELL_PURPOSES
+from .references import build_references
 
 COHORT_KINDS = ("gsm8k", "mmlu", "code", "exact", "rubric")
 
@@ -228,6 +229,7 @@ def build_report(result, view, ledger_totals):
         collection_cost=cost_summary(source_rows, complete=collection_complete),
         counterfactual_policy_consumption=costs,
         cohorts=cohorts,
+        references=build_references(result, view, cost_summary),
         local_lookup_timing=timing_summary(
             [r["lookup_latency_ms"] for r in source_rows if r["lookup_latency_ms"] is not None]
         ),
@@ -311,6 +313,24 @@ def render_markdown(report):
             f"| {cohort['kind']} | {cohort['case_N']} | {cohort['eligible_N']} | "
             f"{cohort['unscored_N']} | {cohort['family_N']} |"
         )
+    lines += [
+        "",
+        "## Counterfactual references",
+        "",
+        "Fixed seed/grid; oracle uses scoring only after routing. No runnable oracle or tuning.",
+        "Model-source costs only; host cost and reference/model latency remain unknown.",
+        "| Reference | Passed / eligible | Missing | Source USD |",
+        "|---|---:|---:|---:|",
+    ]
+    for row in report["references"]["rows"]:
+        metric = row["metric"]
+        amount = row["source_cost"]["source_point_usd"]
+        lines.append(
+            f"| {row['reference']} | {metric['numerator']} / {metric['denominator']} | "
+            f"{row['unavailable_N']} | {'unknown' if amount is None else amount} |"
+        )
+    if report["references"]["status"] == "empty":
+        lines.append("No deterministic cases; no reference point is inferred.")
     lines += [
         "",
         "Current external spend: $"
