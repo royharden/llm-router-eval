@@ -11,6 +11,7 @@ from uuid import uuid4
 
 from ..shared.callledger import Ledger
 from ..shared.callledger.models import (
+    Allocation,
     BudgetAuthority,
     CallContext,
     ChildBound,
@@ -273,10 +274,13 @@ def build_matrix_spec(
 @dataclass(frozen=True)
 class CellObservation:
     name: str
-    span_id: str
+    span_id: str | None
     request_identity_sha256: str
     result: Result | None = field(repr=False)
     reason: Literal["collected", "cheap_unavailable"]
+    allocation: Allocation | None = None
+    context: CallContext | None = None
+    restored: bool = False
 
 
 @dataclass(frozen=True)
@@ -305,6 +309,9 @@ class ObservationMatrix:
             if value.result is None
             else Result.model_validate(value.result.model_dump(mode="json")),
             value.reason,
+            value.allocation,
+            value.context,
+            value.restored,
         )
 
     def safe_projection(self):
@@ -329,6 +336,8 @@ class ObservationMatrix:
                 source_latency_ms=None
                 if o.result is None or o.result.source_capture is None
                 else o.result.source_capture.latency_ms,
+                restored_from_campaign=o.restored,
+                source_allocation_id=None if o.allocation is None else o.allocation.allocation_id,
             )
             for o in self._observations.values()
         ]
@@ -421,17 +430,32 @@ class ObservationMatrix:
 
 
 def collect_matrix(
-    spec: MatrixSpec, *, ledger: Ledger, budget: BudgetAuthority, fixtures: FixtureIndex, clock=None
+    spec: MatrixSpec,
+    *,
+    ledger: Ledger,
+    budget: BudgetAuthority,
+    fixtures: FixtureIndex,
+    clock=None,
+    completed_cells=None,
+    on_cell=None,
+    mode="mock",
 ):
     """All six children are admitted before first lookup; no transport object is accepted."""
     spec.verify()
     if budget.max_outbound_attempts != 0 or ledger.authority.max_outbound_attempts != 0:
         raise ValueError("matrix_zero_quota")
+    if mode not in {"mock", "strict_replay"} or (on_cell is not None and not callable(on_cell)):
+        raise ValueError("matrix_offline_mode")
+    completed_cells = dict(completed_cells or {})
+    if set(completed_cells) - set(CELL_PURPOSES):
+        raise ValueError("matrix_resume_cells")
+    for observation in completed_cells.values():
+        validate_retained_observation(spec, observation, ledger)
     clock = clock or time.monotonic
     providers = {
         cell.name: Provider(
             cell.provider_config,
-            mode="mock",
+            mode=mode,
             request_evidence=[c.evidence for c in spec.cells],
             fixtures=fixtures,
             capture_mode="fixture_replay",
@@ -443,7 +467,9 @@ def collect_matrix(
         spec.plan, ledger=ledger, budget=budget, context=spec.root_context, limits=spec.limits
     )
     try:
-        return _collect_matrix_cells(spec, allocation, providers, ledger, budget, clock)
+        return _collect_matrix_cells(
+            spec, allocation, providers, ledger, budget, clock, completed_cells, on_cell
+        )
     except BaseException:
         # The admitted plan is genuinely offline with zero attempts. Close only its
         # still-undispatched children; completed lookups/provenance remain intact.
@@ -469,11 +495,46 @@ def collect_matrix(
         raise
 
 
-def _collect_matrix_cells(spec, allocation, providers, ledger, budget, clock):
+def _collect_matrix_cells(
+    spec, allocation, providers, ledger, budget, clock, completed_cells, on_cell
+):
     observations = []
     cheap_usable = False
     for cell in spec.cells:
         span_id = "lookup-" + canonical_digest([spec.root_context.operation_id, cell.name])[:32]
+        if cell.name in completed_cells:
+            previous = completed_cells[cell.name]
+            ledger.finish_child(
+                allocation,
+                child_id=cell.name,
+                outcome="cancelled_before_dispatch",
+                proof_sha256=canonical_digest(
+                    dict(
+                        allocation_id=allocation.allocation_id,
+                        child_id=cell.name,
+                        undispatched=True,
+                    )
+                ),
+            )
+            observations.append(
+                CellObservation(
+                    previous.name,
+                    previous.span_id,
+                    previous.request_identity_sha256,
+                    previous.result,
+                    previous.reason,
+                    previous.allocation,
+                    previous.context,
+                    True,
+                )
+            )
+            if cell.name == "cheap":
+                cheap_usable = (
+                    previous.result is not None
+                    and previous.result.status == "ok"
+                    and previous.result.text is not None
+                )
+            continue
         if cell.name.startswith("check_") and not cheap_usable:
             ledger.finish_child(
                 allocation,
@@ -490,12 +551,16 @@ def _collect_matrix_cells(spec, allocation, providers, ledger, budget, clock):
             observations.append(
                 CellObservation(
                     cell.name,
-                    span_id,
+                    None,
                     cell.prepared.request_identity_sha256,
                     None,
                     "cheap_unavailable",
+                    allocation,
+                    cell.context,
                 )
             )
+            if on_cell is not None:
+                on_cell(observations[-1])
             continue
         started = clock()
         result = providers[cell.name].run(
@@ -520,11 +585,87 @@ def _collect_matrix_cells(spec, allocation, providers, ledger, budget, clock):
         )
         observations.append(
             CellObservation(
-                cell.name, span_id, cell.prepared.request_identity_sha256, result, "collected"
+                cell.name,
+                span_id,
+                cell.prepared.request_identity_sha256,
+                result,
+                "collected",
+                allocation,
+                cell.context,
             )
         )
         if cell.name == "cheap":
             cheap_usable = result.status == "ok" and result.text is not None
             if cheap_usable and result.text != spec.expected_cheap_text:
                 raise ValueError("matrix_cheap_response_binding")
+        if on_cell is not None:
+            on_cell(observations[-1])
     return ObservationMatrix(spec, allocation, tuple(observations))
+
+
+def validate_retained_observation(spec: MatrixSpec, observation: CellObservation, ledger: Ledger):
+    """Check actual original owner scope. The caller separately verifies durable result digests."""
+    expected = next((c for c in spec.cells if c.name == observation.name), None)
+    if expected is None or observation.allocation is None or observation.context is None:
+        raise ValueError("matrix_retained_scope")
+    if (
+        observation.context.task_id != spec.item.prompt_id
+        or observation.context.semantic_context() != expected.context.semantic_context()
+        or observation.request_identity_sha256 != expected.prepared.request_identity_sha256
+    ):
+        raise ValueError("matrix_retained_scope")
+    counters = ledger.child_counters(observation.allocation, context=observation.context)
+    if (
+        counters.mode != "offline"
+        or counters.used_attempts != 0
+        or counters.remaining_attempts != 0
+        or ledger.authority.max_outbound_attempts != 0
+    ):
+        raise ValueError("matrix_retained_scope")
+    result = observation.result
+    if result is None:
+        if (
+            observation.reason != "cheap_unavailable"
+            or observation.span_id is not None
+            or counters.child_state != "cancelled_before_dispatch"
+        ):
+            raise ValueError("matrix_retained_scope")
+        return
+    result.validate_for(expected.prepared.request)
+    if (
+        result.status == "ok"
+        and isinstance(expected.prepared.request, GenerateRequest)
+        and expected.prepared.request.output_schema is not None
+    ):
+        from ..shared.providers.schema import validate_output
+
+        validate_output(result.parsed, expected.prepared.request.output_schema)
+    if (
+        result.accounting_ref != observation.allocation.allocation_id
+        or result.attempt_ids
+        or result.current_external_cost_usd != "0"
+        or observation.reason != "collected"
+        or observation.span_id is None
+    ):
+        raise ValueError("matrix_retained_scope")
+    source = result.source_capture
+    if source is None:
+        if result.status != "cache_miss" or counters.child_state != "cancelled_before_dispatch":
+            raise ValueError("matrix_retained_scope")
+    elif (
+        source.request_identity_sha256 != observation.request_identity_sha256
+        or counters.child_state != "complete"
+    ):
+        raise ValueError("matrix_retained_scope")
+    if (
+        result.status == "ok"
+        and result.model_reported
+        not in expected.provider_config.models[result.model_requested].reported_models
+    ):
+        raise ValueError("matrix_retained_scope")
+    if (
+        observation.name == "cheap"
+        and result.status == "ok"
+        and result.text != spec.expected_cheap_text
+    ):
+        raise ValueError("matrix_cheap_response_binding")
