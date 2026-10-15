@@ -23,7 +23,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             {
                 "application": "llm-router-eval",
                 "version": __version__,
-                "implementation": "offline_routing_foundation",
+                "implementation": "offline_scoring_foundation",
+                "scoring": "anchored_deterministic_rubric_unvalidated",
                 "routing": "seven_variants_caller_callbacks",
                 "data": "local_admission_controls_corpus_pending",
                 "evaluation": "not_implemented",

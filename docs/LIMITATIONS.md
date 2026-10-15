@@ -2,7 +2,7 @@
 
 The repository contains a keyless package, wire models/schemas, a SQLite/Decimal ledger, an offline controller and local data-admission/split/seal validation.
 
-- Routing policies use explicit caller callbacks; their Provider/Ledger runner is not implemented. Scoring, live SDK/HTTP transport and evaluation are pending.
+- Routing policies use explicit caller callbacks; their Provider/Ledger runner is not implemented. Anchored deterministic scoring exists; live SDK/HTTP transport, canonical-statistics/rubric integration and evaluation remain pending.
 - No licensed 300-prompt corpus or human judge labels have been acquired.
 - No cost, quality, savings or latency result is measured.
 - The offline foundation is available as a source snapshot; actual consumer adoption requires its own grant, exact Git blob hashes, licences and moved tests.
@@ -13,6 +13,8 @@ Future implementations must generate named failures from actual evaluation outpu
 The data module includes ten authored implementation controls and structural admission tests. It has no independent frozen corpus or upstream licensed-row extractor. Admission receipts and source declarations must come from an actual trusted owner. Journal validation alone is not durable campaign/once-only heldout execution; that runner remains pending. See [data-contracts.md](data-contracts.md).
 
 The routing code tier supports only bounded integer sum/product prompts. Other code grammars are deferred. Real calibration is absent, so executable cascades escalate every cheap answer; test permits are synthetic. Routing/reference tests establish source behavior only, not cost, quality, live robustness or a full evaluation. See [routing-contracts.md](routing-contracts.md).
+
+Rubric scoring remains unvalidated/unscored. Calibration domain counts and toy intervals do not supply a generic statistics implementation, actual source/labels or quality acceptance. Canonical S2 statistics, real human anchors and the rubric bridge remain pending; missing and unscored records retain their assigned denominator. See [scoring-contracts.md](scoring-contracts.md).
 
 See [INTERFACE.md](INTERFACE.md) and the [ledger contract](../src/llm_router_eval/shared/callledger/README.md). Wire declarations alone do not reserve money; the ledger performs atomic accounting with trusted registered evidence. No live price/token bounds, filesystem/general image decoder or arbitrary full JSON Schema validation are established. A charge above its bound is recorded and halts further funding; an incorrect bound can cause actual spend above the cap.
 

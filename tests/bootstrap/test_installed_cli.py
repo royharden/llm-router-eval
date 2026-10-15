@@ -47,7 +47,8 @@ def test_installed_status_is_keyless_and_has_no_network(tmp_path):
     )
     assert result.returncode == 0, result.stderr
     status = json.loads(result.stdout)
-    assert status["implementation"] == "offline_routing_foundation"
+    assert status["implementation"] == "offline_scoring_foundation"
+    assert status["scoring"] == "anchored_deterministic_rubric_unvalidated"
     assert status["routing"] == "seven_variants_caller_callbacks"
     assert status["data"] == "local_admission_controls_corpus_pending"
     assert status["evaluation"] == "not_implemented"

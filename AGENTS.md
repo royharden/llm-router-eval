@@ -1,12 +1,12 @@
 # Product agent instructions
 
-Version 1.4 — 2026-10-14: offline provider, data and routing foundations.
+Version 1.5 — 2026-10-14: offline foundations and anchored scoring.
 
 ## Commands and scope
 
 Use Python 3.12 and uv from this Git root. Run uv sync --frozen, uv run ruff check ., uv run ruff format --check ., and uv run pytest -m "not live". The installed keyless entrypoint is llm-router-eval status.
 
-Current product stage includes wire models/schemas, SQLite/Decimal accounting, an offline provider controller, local data-admission/split/seal validation and seven prompt-only routing variants using caller callbacks. Live SDK/HTTP transport, a complete evaluation runner and scoring remain unavailable. Do not report a routing benchmark, live provider integration, price/token-bound proof, consumer vendoring or live result until the corresponding implementation and execution evidence exist.
+Current product stage includes wire models/schemas, SQLite/Decimal accounting, an offline provider controller, local data-admission/split/seal validation, seven prompt-only routing variants and anchored deterministic scoring. Live SDK/HTTP transport, canonical-statistics/rubric integration and a complete evaluation runner remain unavailable. Do not report a routing benchmark, live provider integration, price/token-bound proof, consumer vendoring or live result until the corresponding implementation and execution evidence exist.
 
 ## Development policy
 
@@ -28,6 +28,7 @@ The shared offline foundation and routing policy source are implemented. Live pr
 
 ## Changelog
 
+- 1.5: added anchored scoring and honest calibration-domain boundaries; no generic statistics fork, actual labels or quality claim.
 - 1.4: aligned inventory with local data plumbing and callback-based routing; real corpus, calibration and evaluation remain pending.
 - 1.3: aligned stage inventory with offline controller and explicit strict-fixture/injected contracts; no live transport or evaluation claim.
 - 1.2: aligned stage metadata with the local accounting/pricing foundation; provider/controller transport and evaluation remain unavailable.
