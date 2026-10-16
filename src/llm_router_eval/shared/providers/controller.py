@@ -1,7 +1,4 @@
-"""One offline controller: actual Ledger calls, immutable fixtures or injected test transport.
-
-There is intentionally no HTTP/SDK client, credential lookup or live mode here.
-"""
+"""One accounting controller for offline reuse, simulations and explicit native SDK calls."""
 
 import hashlib
 import math
@@ -104,7 +101,7 @@ class Provider:
         self,
         config: ProviderConfig,
         *,
-        mode: Literal["mock", "strict_replay", "injected_simulation"],
+        mode: Literal["mock", "strict_replay", "injected_simulation", "live"],
         request_evidence: Iterable[RequestEvidence],
         fixtures: FixtureIndex | None = None,
         transport: InjectedTransport | None = None,
@@ -113,8 +110,19 @@ class Provider:
         clock=None,
         sleep=None,
     ):
-        if mode not in {"mock", "strict_replay", "injected_simulation"}:
+        if mode not in {"mock", "strict_replay", "injected_simulation", "live"}:
             raise ProviderError("unsupported_live_transport")
+        if mode == "live":
+            from .sdk import SDKTransport
+
+            if (
+                not isinstance(transport, SDKTransport)
+                or transport.is_test_transport
+                or transport.flavor != config.flavor
+                or capture_mode != "disabled"
+                or fixtures is not None
+            ):
+                raise ProviderError("unsupported_live_transport")
         if capture_mode not in {"disabled", "fixture_replay"}:
             raise ProviderError("unsupported_capture_mode")
         self.config = ProviderConfig.model_validate(config.model_dump(mode="json"))
@@ -136,9 +144,34 @@ class Provider:
         self.sleep = sleep or time.sleep
 
     def prepare(self, request, *, context: CallContext, limits: Limits) -> PreparedRequest:
-        return prepare_request(
+        prepared = prepare_request(
             request, config=self.config, context=context, limits=limits, images=self.images
         )
+        if self.transport is not None:
+            from .sdk import SDKTransport
+
+            if isinstance(self.transport, SDKTransport):
+                if self.transport.flavor != self.config.flavor:
+                    raise ProviderError("provider_binding")
+                payload = self.transport.prepare_payload(prepared.payload_json)
+                prepared = replace(
+                    prepared,
+                    payload_json=payload,
+                    dispatched_envelope_sha256=hashlib.sha256(payload).hexdigest(),
+                )
+        return prepared
+
+    @property
+    def ledger_mode(self):
+        if self.mode == "live":
+            return "external"
+        return "simulation" if self.mode == "injected_simulation" else "offline"
+
+    def _live_limits(self, limits):
+        if self.mode == "live" and (
+            limits.max_attempts_total != 1 or limits.max_content_repairs != 0
+        ):
+            raise ProviderError("unsupported_live_retries")
 
     def admit_operation(
         self,
@@ -150,11 +183,12 @@ class Provider:
         limits: Limits,
     ) -> Allocation:
         self._budget(ledger, budget)
+        self._live_limits(limits)
         return ledger.admit_operation(
             plan,
             context=context,
             limits=limits,
-            mode="simulation" if self.mode == "injected_simulation" else "offline",
+            mode=self.ledger_mode,
         )
 
     @staticmethod
@@ -166,6 +200,7 @@ class Provider:
 
     def _bound(self, request, *, purpose, ledger, budget, context, limits, allocation):
         self._budget(ledger, budget)
+        self._live_limits(limits)
         prepared = self.prepare(request, context=context, limits=limits)
         envelope = ExecutionEnvelope(
             schema_version=1,
@@ -191,7 +226,7 @@ class Provider:
             context=context,
             limits=limits,
             request=evidence,
-            require_zero_dispatch=self.mode != "injected_simulation",
+            require_zero_dispatch=self.ledger_mode == "offline",
         )
         if (view.provider_config_sha256, view.model, view.bound_evidence_sha256) != (
             self.config.sha256,
@@ -199,7 +234,7 @@ class Provider:
             evidence.bound_evidence_sha256,
         ):
             raise ProviderError("provider_binding")
-        if view.mode != ("simulation" if self.mode == "injected_simulation" else "offline"):
+        if view.mode != self.ledger_mode:
             raise ProviderError("mode_mismatch")
         return prepared, evidence, view
 
@@ -298,7 +333,7 @@ class Provider:
                 or view.repairs_used != 0
             ):
                 raise ProviderError("generation_repair_fresh_child")
-        if self.mode != "injected_simulation":
+        if self.mode not in {"injected_simulation", "live"}:
             return self._reuse(
                 prepared,
                 evidence,
@@ -309,9 +344,8 @@ class Provider:
                 limits=limits,
                 allocation=allocation,
             )
-        if (
-            self.transport is None
-            or getattr(self.transport, "is_test_transport", False) is not True
+        if self.transport is None or getattr(self.transport, "is_test_transport", None) is not (
+            self.mode == "injected_simulation"
         ):
             raise ProviderError("unsupported_live_transport")
         if isinstance(prepared.request, GenerateRequest) and any(
@@ -815,7 +849,7 @@ class Provider:
         source = SourceCaptureRef(
             capture_id=attempts[-1],
             capture_sha256=hashlib.sha256(last_body).hexdigest(),
-            origin="synthetic",
+            origin="live" if self.mode == "live" else "synthetic",
             source_run_id=context.run_id,
             request_identity_sha256=prepared.request_identity_sha256,
             model_requested=prepared.request.model,
@@ -858,10 +892,10 @@ class Provider:
             normalized_usage=usage,
             accounting_ref=allocation.allocation_id,
             attempt_ids=attempts,
-            origin="mock",
+            origin="live" if self.mode == "live" else "mock",
             source_capture=source,
             latency_ms=max((self.clock() - started) * 1000, 0),
             first_output_ms=first_ms,
             first_output_kind=first_kind,
-            current_external_cost_usd="0",
+            current_external_cost_usd=source_cost if self.mode == "live" else "0",
         ).validate_for(logical_request)

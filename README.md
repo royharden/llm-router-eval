@@ -49,7 +49,7 @@ See [evaluation contracts](docs/evaluation-contracts.md), [provider contracts](d
 
 ## Remaining work and verification
 
-See [development status](DEVELOPMENT-STATUS.md), [limitations](docs/LIMITATIONS.md), [lessons](LESSONS.md) and [Bolt handoff](BOLT-HANDOFF.md). Real SDK transport, licensed corpus inputs, independent labels/calibration, controlled heldout evaluation and model-quality conclusions remain outstanding. Optional viewer and telemetry emitter are deferred. Independent finished-app review and release acceptance are separate from local checks.
+See [development status](DEVELOPMENT-STATUS.md), [limitations](docs/LIMITATIONS.md), [lessons](LESSONS.md) and [Bolt handoff](BOLT-HANDOFF.md). The optional [native SDK producer](docs/native-sdk.md) has local mocked-wire controls; independently reviewed live integration, project account/pricing bounds, licensed corpus inputs, independent labels/calibration, controlled heldout evaluation and model-quality conclusions remain outstanding. Optional viewer and telemetry emitter are deferred. Independent finished-app review and release acceptance are separate from local checks.
 
 ```sh
 uv run --frozen ruff check .

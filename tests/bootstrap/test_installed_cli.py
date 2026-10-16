@@ -52,7 +52,9 @@ def test_installed_status_is_keyless_and_has_no_network(tmp_path):
     assert status["routing"] == "seven_variants_caller_callbacks"
     assert status["data"] == "local_admission_controls_corpus_pending"
     assert status["evaluation"] == "canonical_fixed_population_authored_DEV_only"
-    assert status["shared_modules"] == "offline_controller_available_live_transport_not_implemented"
+    assert (
+        status["shared_modules"] == "offline_controller_and_opt_in_native_sdk_transport_available"
+    )
 
 
 def test_evaluation_requires_explicit_inputs_and_output(tmp_path):

@@ -97,7 +97,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "routing": "seven_variants_caller_callbacks",
                 "data": "local_admission_controls_corpus_pending",
                 "evaluation": "canonical_fixed_population_authored_DEV_only",
-                "shared_modules": "offline_controller_available_live_transport_not_implemented",
+                "shared_modules": "offline_controller_and_opt_in_native_sdk_transport_available",
                 "network": "not_required",
             },
             sort_keys=True,

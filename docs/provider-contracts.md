@@ -1,6 +1,6 @@
 # Offline provider/controller foundation
 
-The actual source APIs are `shared.providers.controller.Provider` and the provider-owned models, adapters, fixture index, schema and in-memory image helpers. There is no SDK/HTTP client, credential loader or live mode. Injected adapters exercise synthetic payload contracts against the real SQLite ledger. They do not establish model/account access, token-count/billing proof, genuine SDK retry settings or provider quality/latency.
+The actual source APIs are `shared.providers.controller.Provider` and the provider-owned models, adapters, fixture index, schema and in-memory image helpers. The default path remains offline. An explicit optional [native SDK transport](native-sdk.md) adds caller-injected credentials and live/external accounting; it performs no ambient credential lookup. Injected adapters exercise synthetic payload contracts against the real SQLite ledger. Injected fixture adapters do not establish model/account access, token-count/billing proof or provider quality/latency. Native SDK mock-wire retry and cancellation controls are qualified separately.
 
 ## Required bindings and actual allocation
 
