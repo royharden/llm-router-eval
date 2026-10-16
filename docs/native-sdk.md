@@ -82,6 +82,14 @@ SDK timeout/environment comparison failures remain preserved; fresh successful
 checks do not relabel those failures. Optional dependency lock URLs remain public
 and portable, and previous base dependency versions are retained.
 
+The exact canonical producer and its later unknown-usage repair have independent
+bounded acceptance for SDK mocked-wire accounting and Windows worker closure.
+The repair review executed the 12 affected cases and two separate wire witnesses,
+including genuine Ledger completion proof, one attempt and retained unknown
+liability. These observations establish the producer contract; each consumer must
+still adopt the exact source and verify its own actual accounting join. The
+producer-side unavailable-result projection is a declared wire stub.
+
 Before any paid use, the exact producer publication and lock require independent
 review; each consumer must adopt that source and pass its own accounting join.
 Trusted project-owned credential injection and canonical conservative price/liability
