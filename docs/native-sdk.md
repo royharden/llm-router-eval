@@ -8,6 +8,11 @@ uv sync --frozen --extra sdk
 uv run --frozen --extra sdk pytest tests/providers/test_sdk_wire_worker.py tests/providers/test_sdk_transport.py
 ```
 
+The separate Windows CI job explicitly installs this extra and exercises these
+mock controls. Its dependency setup needs public package downloads; the tests
+do not require provider credentials or real provider requests. The default
+Ubuntu job continues to check the offline core without the optional SDK extra.
+
 The implemented native scope is text-only OpenAI Responses `gpt-6-luna` and TypeSafe
 `jev-1.13.0` `system_one`, at most 32,000 payload bytes, 8,000 UTF-8 string-value bytes,
 512 OpenAI output tokens, and 65,536 response bytes. Streaming, tools, images,
