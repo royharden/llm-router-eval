@@ -246,3 +246,81 @@ def test_transport_rejects_retry_without_worker():
     with pytest.raises(ValueError):
         t.send(t.prepare_payload(payload()), timeout_s=1, max_retries=1, max_response_bytes=65536)
     assert t.last_execution is None
+
+
+@pytest.mark.parametrize("phase", ["prepare", "admit"])
+def test_unsupported_native_response_cap_refuses_before_funding(rig, phase):
+    """what_bug_this_catches: unsupported SDK caps must not reserve funded work."""
+    native_rig(rig)
+    rig.limits = rig.limits.model_copy(update={"max_response_bytes": 65537})
+    transport = SDKTransport("openai_responses", mock=mock({}))
+    provider = rig.provider(transport=transport)
+    with rig.open() as ledger:
+        before = ledger.totals()
+        with pytest.raises(ProviderError, match="unsupported_sdk_response_limit"):
+            if phase == "prepare":
+                provider.prepare(rig.request, context=rig.context(), limits=rig.limits)
+            else:
+                provider.admit_operation(
+                    rig.plan(),
+                    ledger=ledger,
+                    budget=rig.authority,
+                    context=rig.context(),
+                    limits=rig.limits,
+                )
+        assert ledger.totals() == before
+    assert transport.last_execution is None
+
+
+def test_unsupported_native_response_cap_cannot_create_dispatch_liability(rig, monkeypatch):
+    """what_bug_this_catches: a pre-send local refusal was charged as unknown dispatch."""
+    from llm_router_eval.shared.providers import sdk
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("unsupported configuration must never start a native worker")
+
+    monkeypatch.setattr(sdk, "_owned_worker", forbidden)
+    native_rig(rig)
+    transport = SDKTransport("openai_responses", mock=mock({}))
+    provider = rig.provider(transport=transport)
+    prepared = provider.prepare(rig.request, context=rig.context(), limits=rig.limits)
+    rig.evidence = [
+        rig.evidence[0].model_copy(
+            update={"dispatched_envelope_sha256": prepared.dispatched_envelope_sha256}
+        )
+    ]
+    provider = rig.provider(transport=transport)
+    rig.limits = rig.limits.model_copy(update={"max_response_bytes": 65537})
+    with rig.open() as ledger:
+        # Direct Ledger admission is legitimate; Provider must still recheck its
+        # narrower transport contract before transferring any reservation.
+        allocation = ledger.admit_operation(
+            rig.plan(), context=rig.context(), limits=rig.limits, mode="simulation"
+        )
+        before = ledger.totals()
+        with pytest.raises(ProviderError):
+            provider.run(rig.request, **rig.kwargs(ledger, allocation))
+        assert ledger.totals() == before
+        assert ledger.totals()["dispatched_attempts"] == 0
+        assert ledger.totals()["unknown_liability_usd"] == "0"
+    assert transport.last_execution is None
+
+
+@pytest.mark.parametrize("response_cap", [1, 65536])
+def test_supported_native_response_cap_still_prepares_and_admits(rig, response_cap):
+    native_rig(rig)
+    rig.limits = rig.limits.model_copy(update={"max_response_bytes": response_cap})
+    transport = SDKTransport("openai_responses", mock=mock({}))
+    provider = rig.provider(transport=transport)
+    provider.prepare(rig.request, context=rig.context(), limits=rig.limits)
+    with rig.open() as ledger:
+        allocation = provider.admit_operation(
+            rig.plan(),
+            ledger=ledger,
+            budget=rig.authority,
+            context=rig.context(),
+            limits=rig.limits,
+        )
+        assert allocation.operation_id == "op1"
+        assert ledger.totals()["dispatched_attempts"] == 0
+    assert transport.last_execution is None

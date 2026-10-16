@@ -144,6 +144,7 @@ class Provider:
         self.sleep = sleep or time.sleep
 
     def prepare(self, request, *, context: CallContext, limits: Limits) -> PreparedRequest:
+        self._sdk_limits(limits)
         prepared = prepare_request(
             request, config=self.config, context=context, limits=limits, images=self.images
         )
@@ -173,6 +174,15 @@ class Provider:
         ):
             raise ProviderError("unsupported_live_retries")
 
+    def _sdk_limits(self, limits):
+        from .sdk import SDKTransport
+
+        if isinstance(self.transport, SDKTransport):
+            try:
+                self.transport.validate_response_limit(limits.max_response_bytes)
+            except ValueError:
+                raise ProviderError("unsupported_sdk_response_limit") from None
+
     def admit_operation(
         self,
         plan: OperationPlan,
@@ -184,6 +194,7 @@ class Provider:
     ) -> Allocation:
         self._budget(ledger, budget)
         self._live_limits(limits)
+        self._sdk_limits(limits)
         return ledger.admit_operation(
             plan,
             context=context,

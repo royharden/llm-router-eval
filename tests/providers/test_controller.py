@@ -181,7 +181,12 @@ def test_429_then_invalid_output_uses_only_two_no_content_repair(rig, spy, reply
     bad = rig.body()
     bad["output"][0]["content"][0]["text"] = '{"tier":"invented"}'
     transport = spy(
-        rig, [reply({}, 429, headers={"Retry-After": "0"}), reply(bad), reply(rig.body())]
+        rig,
+        [
+            reply({"usage": {"input_tokens": 100}}, 429, headers={"Retry-After": "0"}),
+            reply(bad),
+            reply(rig.body()),
+        ],
     )
     provider = rig.provider(transport=transport)
     with rig.open() as ledger:
@@ -190,9 +195,26 @@ def test_429_then_invalid_output_uses_only_two_no_content_repair(rig, spy, reply
         assert result.status == "invalid_output" and result.parsed is None
         assert len(transport.calls) == ledger.totals()["dispatched_attempts"] == 2
         assert len(transport.replies) == 1  # no third repair or hidden request
-        assert Decimal(ledger.totals()["unknown_liability_usd"]) == Decimal("0.1")
-        assert Decimal(ledger.totals()["known_spend_usd"]) == Decimal("0.01")
+        assert Decimal(ledger.totals()["unknown_liability_usd"]) == 0
+        assert Decimal(ledger.totals()["known_spend_usd"]) == Decimal("0.02")
+        assert result.source_capture.cost_usd == "0.02"
+
+
+def test_429_unknown_usage_stops_retry_and_preserves_dispatch_liability(rig, spy, reply):
+    """what_bug_this_catches: HTTP retryability cannot override unknown settlement."""
+    transport = spy(rig, [reply({}, 429), reply(rig.body())])
+    provider = rig.provider(transport=transport)
+    with rig.open() as ledger:
+        allocation = admit(rig, provider, ledger)
+        result = provider.run(rig.request, **rig.kwargs(ledger, allocation))
+        assert result.status == "provider_error" and result.parsed is None
+        assert len(result.attempt_ids) == len(transport.calls) == 1
+        assert len(transport.replies) == 1
         assert result.source_capture.cost_usd is None
+        assert Decimal(ledger.totals()["unknown_liability_usd"]) == Decimal("0.1")
+        assert Decimal(ledger.totals()["known_spend_usd"]) == 0
+        assert Decimal(ledger.totals()["future_holds_usd"]) == 0
+        assert ledger.operation_state(allocation) == "partial"
 
 
 def test_retry_after_beyond_remaining_deadline_does_not_send_again(rig, spy, reply):

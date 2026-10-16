@@ -19,6 +19,11 @@ The implemented native scope is text-only OpenAI Responses `gpt-6-luna` and Type
 nondefault endpoints, provider retries and live content repairs are excluded.
 Native OpenAI preparation explicitly binds `service_tier="default"` before admission,
 so an account's automatic service-tier preference cannot change the requested tier.
+The native response limit must be between 1 and 65,536 bytes. Unsupported limits
+return `unsupported_sdk_response_limit` during preparation or operation admission,
+before funding is reserved. A caller using direct Ledger admission receives the same
+refusal before any dispatch marker or unknown liability is created; its existing
+reservation is preserved for the caller to disposition.
 
 ## Consumer integration
 

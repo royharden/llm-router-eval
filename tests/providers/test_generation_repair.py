@@ -267,7 +267,7 @@ def test_first_success_releases_unused_hold_without_repair(rig, spy, reply):
 def test_transport_retry_and_repair_share_two_total_attempts(rig, spy, reply, order):
     policy, _ = configure(rig)
     bad = reply(body(rig, "bad JSON"))
-    busy = reply({"error": "synthetic"}, status=429)
+    busy = reply({"error": "synthetic", "usage": {"input_tokens": 100}}, status=429)
     transport = spy(rig, [busy, bad] if order == "transport_first" else [bad, busy])
     provider = rig.provider(transport=transport)
     with rig.open() as ledger:
@@ -316,7 +316,8 @@ def test_non_content_failures_never_regenerate(rig, spy, reply, reason):
         assert len(transport.calls) == 1 and counters(ledger, rig, allocation).repairs_used == 0
 
 
-def test_unknown_usage_liability_survives_funded_regeneration(rig, spy, reply):
+def test_unknown_usage_stops_funded_regeneration_and_retains_liability(rig, spy, reply):
+    """what_bug_this_catches: unknown usage must stop even an already funded repair."""
     policy, _ = configure(rig)
     unknown = body(rig, "bad JSON")
     unknown.pop("usage")
@@ -327,10 +328,16 @@ def test_unknown_usage_liability_survives_funded_regeneration(rig, spy, reply):
         result = provider.run(
             rig.request, generation_repair=policy, **rig.kwargs(ledger, allocation)
         )
-        assert result.status == "ok" and result.normalized_usage.input_tokens is None
+        assert result.status == "invalid_output" and result.normalized_usage.input_tokens is None
+        assert result.text is None and result.parsed is None
+        assert len(result.attempt_ids) == len(transport.calls) == 1
+        assert len(transport.replies) == 1
+        assert counters(ledger, rig, allocation).repairs_used == 0
         assert result.source_capture.cost_usd is None
         assert Decimal(ledger.totals()["unknown_liability_usd"]) == Decimal("0.1")
-        assert Decimal(ledger.totals()["known_spend_usd"]) == Decimal("0.01")
+        assert Decimal(ledger.totals()["known_spend_usd"]) == 0
+        assert Decimal(ledger.totals()["future_holds_usd"]) == 0
+        assert ledger.operation_state(allocation) == "partial"
 
 
 def test_counter_observation_is_frozen_read_only_and_validates_scope(rig, spy):

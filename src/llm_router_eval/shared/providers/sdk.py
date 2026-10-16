@@ -62,6 +62,12 @@ class SDKTransport:
     def is_test_transport(self):
         return self._mock is not None
 
+    @staticmethod
+    def validate_response_limit(max_response_bytes):
+        """Check the native response envelope before any accounting admission."""
+        if type(max_response_bytes) is not int or not 1 <= max_response_bytes <= 65536:
+            raise ValueError("sdk_send_limits")
+
     def prepare_payload(self, payload_json):
         """Adopt the pinned SDK wire order before request evidence is registered.
 
@@ -147,13 +153,12 @@ class SDKTransport:
         return prepared
 
     def send(self, payload_json, *, timeout_s, max_retries, max_response_bytes):
+        self.validate_response_limit(max_response_bytes)
         if (
             max_retries != 0
             or type(timeout_s) not in {int, float}
             or not math.isfinite(timeout_s)
             or not 0 < timeout_s <= 60
-            or type(max_response_bytes) is not int
-            or not 1 <= max_response_bytes <= 65536
             or self.prepare_payload(payload_json) != payload_json
         ):
             raise ValueError("sdk_send_limits")
