@@ -5,7 +5,7 @@ also exports `SDKTransport` and `ProjectCredential`. Install its pinned optional
 
 ```sh
 uv sync --frozen --extra sdk
-uv run --frozen --extra sdk pytest tests/providers/test_sdk_wire_worker.py tests/providers/test_sdk_transport.py
+uv run --frozen --extra sdk pytest tests/providers/test_sdk_wire_worker.py tests/providers/test_sdk_transport.py tests/providers/test_missing_usage_settlement.py
 ```
 
 The separate Windows CI job explicitly installs this extra and exercises these
@@ -52,6 +52,14 @@ alone does not prove account ownership, spending authority or usable credentials
    The child is closed before returning. First-output timing remains unavailable.
    A timeout/lost response retains conservative unknown liability in the Ledger;
    killing a local process does not prove that a remote request was unbilled.
+
+A valid answer does not establish a known settlement. If normalized usage cannot
+support the bound pricing policy, the controller retains unknown liability and
+stops further retries or repairs for that child. A previously usable answer returns
+`status="unknown"` without usable output, retaining its actual accounting reference,
+attempt IDs and source provenance. Refusal/error outcomes remain unavailable with
+the same honest dispatch accounting. The failed child makes the operation partial;
+it does not turn the dispatch into `not_run` or a zero-cost source observation.
 
 The worker module is an internal implementation detail. Callers must use the accounting
 controller and public transport, and must not invoke the worker or SDK directly to

@@ -61,3 +61,14 @@ Ten focused figure controls passed before final source freezing; exact-candidate
 ## Optional SDK producer construction
 
 Pinned openai3.31.0/typesafe-sdk0.7.5 now run through an explicit transport, exact native prepared-byte binding, one-shot owned process, retry0, predecode response cap and caller-owned real Ledger. Native mock wire cannot enter live mode; live maps to external funding and rejects synthetic pricing/bounds. Initial native diagnostic passed18 cases after a preserved diagnostic-header configuration failure. The corrected final producer passed all42 focused SDK/controller/real-Ledger/Windows-closure controls, plus208 separate provider/contract/CLI regressions with positive SDK-import denial. Earlier38pass/2fixture-binding-failure and28pass/14method-shape-failure runs remain failed records. Broad combined runs did not complete their reporters and are not represented as full-suite passes. Exact commands/source editions and recovery receipts remain outside the repo. Those are authored simulations, not real model/account/price proof. The blocked mock actually reached the wire gate, then Windows Job cancellation closed the owned tree and retained unknown liability. Native OpenAI preparation binds the default service tier before admission. The pinned SDK platform_headers override is a method, matching its actual caller; it avoids an observed WMI metadata hang without replacing SDK auth or serialization. JUnit hostname metadata is explicitly unavailable in the contained test harness, preserving assertions and actual exit/count reporting. POSIX runtime qualification and independent exact producer acceptance remain open. No provider credential value was read and no paid request was made. See [native SDK integration](docs/native-sdk.md).
+
+The exact first SDK supplement received independent acceptance with notes. A later
+consumer join exposed a valid-answer/missing-usage counterexample outside those
+original controls: unknown liability was retained, but semantic success attempted
+an invalid completion proof. The successor keeps the Ledger proof rule intact,
+returns unknown results with dispatch provenance, and stops follow-up sends when
+settlement is unknown. Twelve targeted native mock/real-Ledger controls now cover
+absent, null, malformed and partial usage, known billing, refusal and retryable error
+across the two supported SDKs. They passed locally; successor independent review
+and actual consumer adoption remain separate gates. The accepted predecessor and
+its original test evidence remain historical editions.

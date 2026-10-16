@@ -767,6 +767,18 @@ class Provider:
                 )
                 retryable = False
                 repairable = False
+            policy = PricePolicy.model_validate(decode_wire_json(view.price_policy_json))
+            observation = policy.price(
+                outcome.normalized_usage, reservation_usd=view.reservation_usd
+            )
+            if observation.status == "unknown":
+                # A usable answer is not a known settlement. Keep the dispatch and
+                # liability, stop further sends, and return provenance to the caller.
+                retryable = False
+                repairable = False
+                if outcome.status == "ok":
+                    outcome = replace(outcome, status="unknown", text=None, parsed=None, typed=None)
+                    last_error_code = "unknown_dispatch"
             metadata = self._metadata(
                 outcome,
                 context=context,
@@ -775,10 +787,6 @@ class Provider:
                 error_code=last_error_code,
             )
             proof = ledger.settle(attempt, metadata=metadata, usage=outcome.normalized_usage)
-            policy = PricePolicy.model_validate(decode_wire_json(view.price_policy_json))
-            observation = policy.price(
-                outcome.normalized_usage, reservation_usd=view.reservation_usd
-            )
             usages.append(outcome.normalized_usage)
             costs.append(observation.computed_cost_usd)
             if ledger.totals()["halted"]:

@@ -32,4 +32,4 @@ jobs:
           version: "0.11.19"
           python-version: "3.12"
       - run: uv sync --frozen --extra sdk
-      - run: uv run --frozen --extra sdk pytest tests/providers/test_sdk_wire_worker.py tests/providers/test_sdk_transport.py -m "not live"
+      - run: uv run --frozen --extra sdk pytest tests/providers/test_sdk_wire_worker.py tests/providers/test_sdk_transport.py tests/providers/test_missing_usage_settlement.py -m "not live"

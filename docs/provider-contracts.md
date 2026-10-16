@@ -12,6 +12,13 @@ The ledger's new `validate_allocation(allocation, *, context, limits, request, r
 
 Each injected attempt transfers one hold before one `send(payload_json, timeout_s=..., max_retries=0, max_response_bytes=...)` call. Retryable transport status handling stays inside the caller's persisted attempt cap and remaining deadline. Invalid structured output/refusal does not trigger hidden content repair. Backoff exceeding headroom stops. Usage for failed attempts still settles or retains unknown liability. An injected callable's timeout is cooperative; real SDK cancellation/retry behavior remains an installed-source testing gate. Lost response without any observed body leaves conservative liability and a closed `unknown_dispatch` exception; no fictitious capture is supplied.
 
+Unknown settlement also stops retries and repairs even when the provider supplied
+a valid answer. The controller returns an unknown, unusable result with its actual
+accounting reference, attempt IDs and source provenance; it finishes the child as
+failed while preserving the unknown reservation. It does not weaken the Ledger's
+known-settlement requirement for completion. Known refusal/error semantics remain
+visible, and the operation aggregates failed children as partial.
+
 ## S6 strict fixture/replay seam
 
 Use mode `strict_replay`, capture mode `fixture_replay`, a concrete reviewed immutable `FixtureIndex`, and an actually admitted offline plan whose child has max/remaining/used outbound attempts all zero. Pass `Limits.max_outbound_attempts=0` explicitly. `Provider.validate_replay_allocation` takes the same required kwargs as `run` and performs the read-only actual-ledger check before lookup. `record_reuse(..., caller_limits=...)` revalidates the zero-dispatch binding atomically after lookup. Validation is never a lease; a conflicting completion can still refuse the later write.
