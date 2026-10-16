@@ -19,6 +19,8 @@ uv run --frozen python -m llm_router_eval eval --tasks fixtures/implementation-c
 
 The output contains `accounting.sqlite3`, `report.json` and `report.md`. All seven policies run against one six-cell matrix per input. Eight deterministic cases are eligible; two rubric cases remain unscored. Reports distinguish the actual external charge of zero from invented source-cost controls. Those values are not real model prices or quality results.
 
+Add `--plots` to the normal or demo command to export `quality-cost.png`, `quality-cost.svg` and `figure-data.json`. The combined figure pairs the same deterministic cost/quality population with a separate local-computation timing panel. Canonical 95% family intervals use 2,000 shared draws and require at least two families; real model quality and latency remain unmeasured. Unknown costs omit points while preserving their lower/unknown-upper values in the exact table. See [plotting and reproducibility](docs/plotting.md).
+
 Reusing the same output path returns exit code 2 and a closed refusal, preserving the existing files. Input validation also refuses before output creation. No implicit dataset source, overwrite, payload archive, provider credentials or network is required.
 
 ## Error and demonstration paths
@@ -47,7 +49,7 @@ See [evaluation contracts](docs/evaluation-contracts.md), [provider contracts](d
 
 ## Remaining work and verification
 
-See [development status](DEVELOPMENT-STATUS.md), [limitations](docs/LIMITATIONS.md), [lessons](LESSONS.md) and [Bolt handoff](BOLT-HANDOFF.md). Charts, real SDK transport, licensed corpus inputs, independent labels/calibration, controlled heldout evaluation and model-quality conclusions remain outstanding. Optional viewer and telemetry emitter are deferred. Independent finished-app review and release acceptance are separate from local checks.
+See [development status](DEVELOPMENT-STATUS.md), [limitations](docs/LIMITATIONS.md), [lessons](LESSONS.md) and [Bolt handoff](BOLT-HANDOFF.md). Real SDK transport, licensed corpus inputs, independent labels/calibration, controlled heldout evaluation and model-quality conclusions remain outstanding. Optional viewer and telemetry emitter are deferred. Independent finished-app review and release acceptance are separate from local checks.
 
 ```sh
 uv run --frozen ruff check .

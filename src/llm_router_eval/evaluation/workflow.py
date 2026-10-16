@@ -158,7 +158,7 @@ def offline_authority():
     return authority, limits
 
 
-def run_offline(tasks_path, vectors_path, output_dir, *, scenario="normal"):
+def run_offline(tasks_path, vectors_path, output_dir, *, scenario="normal", plots=False):
     if scenario not in SCENARIOS:
         raise ValueError("offline_scenario")
     target = Path(output_dir)
@@ -232,7 +232,7 @@ def run_offline(tasks_path, vectors_path, output_dir, *, scenario="normal"):
             specs=book.specs, records=book.records, ledger=ledger, budget=authority
         )
         comparison = run_comparison(view, source, policies)
-        report = build_report(comparison, view, ledger.totals())
+        report = build_report(comparison, view, ledger.totals(), include_intervals=plots)
         report["scenario"] = scenario
         if scenario == "budget":
             report["virtual_budget_control"] = virtual_budget_refusal(
@@ -250,6 +250,15 @@ def run_offline(tasks_path, vectors_path, output_dir, *, scenario="normal"):
                 "classifier_invalid" in e.reasons for e, _ in source.executions.values()
             ),
         )
+        if plots:
+            from .plotting import render_figures
+
+            assets = render_figures(report)
+            report["figures"] = {
+                name: hashlib.sha256(data).hexdigest() for name, data in assets.items()
+            }
+            for name, data in assets.items():
+                (target / name).write_bytes(data)
         (target / "report.json").write_bytes(render_json(report))
         (target / "report.md").write_bytes(render_markdown(report))
     return report

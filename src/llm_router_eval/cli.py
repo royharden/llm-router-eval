@@ -28,6 +28,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         command.add_argument(
             "--out", required=True, help="New output directory; parent must exist."
         )
+        command.add_argument(
+            "--plots",
+            action="store_true",
+            help="Export PNG/SVG figures and canonical family sampling intervals.",
+        )
         if name == "demo":
             command.add_argument(
                 "--scenario",
@@ -48,7 +53,11 @@ def main(argv: Sequence[str] | None = None) -> int:
 
         try:
             report = run_offline(
-                args.tasks, args.vectors, args.out, scenario=getattr(args, "scenario", "normal")
+                args.tasks,
+                args.vectors,
+                args.out,
+                scenario=getattr(args, "scenario", "normal"),
+                plots=args.plots,
             )
         except (OSError, ValueError):
             # Input/provider validation bodies may contain private source text; omit them.

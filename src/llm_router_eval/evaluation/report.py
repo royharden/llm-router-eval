@@ -9,6 +9,7 @@ from ..shared.evalkit.reporting import metric_row, not_measured_row, public_aggr
 from ..shared.evalkit.statistics import accuracy
 from .domain import AnswerAdapter
 from .matrix import CELL_PURPOSES
+from .quality_intervals import quality_intervals
 from .references import build_references
 
 COHORT_KINDS = ("gsm8k", "mmlu", "code", "exact", "rubric")
@@ -132,12 +133,19 @@ def _cohort(result, view, gold, spec, source_rows):
     return output
 
 
-def build_report(result, view, ledger_totals):
+def build_report(result, view, ledger_totals, *, include_intervals=False):
     """Only explicit aggregate values enter this report. No prompts, labels or answers."""
     comparison = result.comparison
     gold = view.split_records(comparison.split)
     eligible_ids = tuple(g.item_id for g in gold if AnswerAdapter.label(g).kind != "rubric")
     spec = AnswerAdapter.metric_specs()[0]
+    private_references = {} if include_intervals else None
+    references = build_references(result, view, cost_summary, outcomes_sink=private_references)
+    sampling = (
+        quality_intervals(result, view, private_references)
+        if include_intervals
+        else dict(status="not_requested", methods={})
+    )
     rows = []
     costs = []
     source_rows = result.source.safe_matrix_rows()
@@ -229,13 +237,24 @@ def build_report(result, view, ledger_totals):
         collection_cost=cost_summary(source_rows, complete=collection_complete),
         counterfactual_policy_consumption=costs,
         cohorts=cohorts,
-        references=build_references(result, view, cost_summary),
+        references=references,
+        sampling=sampling,
         local_lookup_timing=timing_summary(
             [r["lookup_latency_ms"] for r in source_rows if r["lookup_latency_ms"] is not None]
         ),
         local_policy_timing=timing_summary(
             [elapsed for _, elapsed in result.source.executions.values()]
         ),
+        local_policy_by_method_timing={
+            name: timing_summary(
+                [
+                    elapsed
+                    for (method, task), (_, elapsed) in result.source.executions.items()
+                    if method == name and task in set(eligible_ids)
+                ]
+            )
+            for name in comparison.methods
+        },
         ledger=dict(
             dispatched_attempts=ledger_totals["dispatched_attempts"],
             known_spend_usd=ledger_totals["known_spend_usd"],
@@ -253,7 +272,9 @@ def build_report(result, view, ledger_totals):
         ),
         host_resource_cost_usd=None,
         model_usage="unknown",
-        intervals="not_requested_for_authored_controls",
+        intervals="canonical_family_bootstrap"
+        if include_intervals
+        else "not_requested_for_authored_controls",
         acceptance=(
             "synthetic_implementation_only; no benchmark, calibration, heldout "
             "or release acceptance"
@@ -331,6 +352,27 @@ def render_markdown(report):
         )
     if report["references"]["status"] == "empty":
         lines.append("No deterministic cases; no reference point is inferred.")
+    if report["sampling"]["status"] == "computed":
+        lines += [
+            "",
+            "## Authored family sampling",
+            "",
+            "95% canonical paired-family intervals; 2,000 shared draws, seed 20261014. "
+            "At least two families are required. These controls do not establish model quality.",
+            "| Method | Lower | Upper | Undefined reason |",
+            "|---|---:|---:|---|",
+        ]
+        for name, estimate in report["sampling"]["methods"].items():
+            interval = estimate["interval"]
+            low = "unavailable" if interval is None else str(interval["low"])
+            high = "unavailable" if interval is None else str(interval["high"])
+            lines.append(f"| {name} | {low} | {high} | {estimate['null_reason'] or ''} |")
+    if "figures" in report:
+        lines += [
+            "",
+            "Figures: [PNG](quality-cost.png), [SVG](quality-cost.svg), "
+            "[exact figure table](figure-data.json).",
+        ]
     lines += [
         "",
         "Current external spend: $"
@@ -344,7 +386,7 @@ def render_markdown(report):
         report["timing_semantics"],
         "",
         "Rubric judgments, independent labels, real captures, licensed corpus, "
-        "charts and provider transport remain pending.",
+        "and provider transport remain pending.",
         "",
     ]
     return "\n".join(lines).encode()

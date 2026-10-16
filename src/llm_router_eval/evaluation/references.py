@@ -86,7 +86,7 @@ def _unavailable(gold, name, origin):
             status="unavailable",
             correct=False,
             predicted=None,
-            expected=None,
+            expected=AnswerAdapter.label(gold).answer,
             human_touched_prediction=False,
             evidence_origin=origin,
             issues=("reference_unavailable",),
@@ -95,7 +95,7 @@ def _unavailable(gold, name, origin):
     )
 
 
-def build_references(result, view, summarize_cost):
+def build_references(result, view, summarize_cost, *, outcomes_sink=None):
     """Reuse canonical outcomes privately, then publish only fixed-population aggregates."""
     gold = tuple(
         g
@@ -166,6 +166,8 @@ def build_references(result, view, summarize_cost):
             spans.update(consumed)
             choices[tier] += 1
         missing = sum(row.status == "unavailable" for row in outcomes)
+        if outcomes_sink is not None:
+            outcomes_sink[name] = tuple(outcomes)
         metric = metric_row(
             tuple(outcomes),
             population,
