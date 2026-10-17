@@ -189,6 +189,38 @@ class StoredCell(WireModel):
     reason: Literal["collected", "cheap_unavailable"]
 
 
+def validate_campaign_authority(path, *, binding, grant, trusted_grants):
+    """The existing store admission, without creating a directory or database."""
+    binding = CampaignBinding.model_validate(binding.model_dump(mode="json"))
+    grant = CampaignGrant.model_validate(grant.model_dump(mode="json"))
+    if (
+        trusted_grants.get(grant.grant_sha256) != canonical_digest(grant.model_dump(mode="json"))
+        or grant.binding_sha256 != binding.sha256
+        or grant.state_id != binding.state_id
+        or grant.database_location_sha256 != database_location_sha256(path)
+        or (binding.split == "heldout" and not grant.heldout_allowed)
+    ):
+        raise CampaignError("campaign_authority")
+    return binding, grant
+
+
+def validate_exposure(binding, grant, admission):
+    """Pure field binding shared by replay preflight and durable exposure recording."""
+    if (
+        binding.split != "heldout"
+        or not grant.heldout_allowed
+        or not isinstance(admission, HeldoutAdmission)
+        or admission.manifest_sha256 != binding.manifest_sha256
+        or admission.independent_seal_sha256 != binding.independent_seal_sha256
+        or admission.dev_config_sha256 != binding.dev_config_sha256
+        or admission.method_config_sha256 != binding.method_config_sha256
+        or admission.history_ref != binding.history_ref
+        or admission.candidate_commit != binding.source_revision
+        or admission.rerun_reason is not None
+    ):
+        raise CampaignError("heldout_frozen_admission_changed")
+
+
 class CampaignStore(HeldoutHistory):
     """Trusted caller supplies authority separately from data. Stores metadata/hashes only.
 
@@ -197,19 +229,11 @@ class CampaignStore(HeldoutHistory):
     """
 
     def __init__(self, path, *, binding: CampaignBinding, grant: CampaignGrant, trusted_grants):
-        self.binding = CampaignBinding.model_validate(binding.model_dump(mode="json"))
+        self.binding, self.grant = validate_campaign_authority(
+            path, binding=binding, grant=grant, trusted_grants=trusted_grants
+        )
         self._binding_sha256 = self.binding.sha256
-        self.grant = CampaignGrant.model_validate(grant.model_dump(mode="json"))
         self.path = Path(path).resolve()
-        if (
-            trusted_grants.get(self.grant.grant_sha256)
-            != canonical_digest(self.grant.model_dump(mode="json"))
-            or self.grant.binding_sha256 != self.binding.sha256
-            or self.grant.state_id != self.binding.state_id
-            or self.grant.database_location_sha256 != database_location_sha256(self.path)
-            or (self.binding.split == "heldout" and not self.grant.heldout_allowed)
-        ):
-            raise CampaignError("campaign_authority")
         original = Path(path)
         if original.is_symlink() or (original.exists() and not original.is_file()):
             raise CampaignError("unsafe_campaign_store")
@@ -306,20 +330,9 @@ class CampaignStore(HeldoutHistory):
 
     def record_exposure(self, admission: HeldoutAdmission):
         b = self.binding
-        if (
-            b.sha256 != self._binding_sha256
-            or b.split != "heldout"
-            or not self.grant.heldout_allowed
-            or not isinstance(admission, HeldoutAdmission)
-            or admission.manifest_sha256 != b.manifest_sha256
-            or admission.independent_seal_sha256 != b.independent_seal_sha256
-            or admission.dev_config_sha256 != b.dev_config_sha256
-            or admission.method_config_sha256 != b.method_config_sha256
-            or admission.history_ref != b.history_ref
-            or admission.candidate_commit != b.source_revision
-            or admission.rerun_reason is not None
-        ):
+        if b.sha256 != self._binding_sha256:
             raise CampaignError("heldout_frozen_admission_changed")
+        validate_exposure(b, self.grant, admission)
         payload = asdict(admission)
         with self._transaction():
             if self.connection.execute("SELECT 1 FROM exposure").fetchone():
