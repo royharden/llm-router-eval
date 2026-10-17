@@ -89,6 +89,11 @@ The existing frozen-corpus validation still requires the full prescribed
 300-item mix and family-separated 150/150 split. Rights, reference origins and
 source receipts cannot be inferred merely from those counts.
 
+Benchmark revalidation carries the originally admitted dataset bytes and checks
+that their parsed dataset matches the supplied dataset object. The split manifest
+identifies canonical dataset content; the dataset grant and configuration seal
+continue to bind the exact raw file bytes, including valid JSON whitespace.
+
 The configuration seal binds the exact dataset bytes and canonical family split,
 public inference configuration, ordered retained price references, seven method
 configurations, policy thresholds, explicit unvalidated/no-judge profile,

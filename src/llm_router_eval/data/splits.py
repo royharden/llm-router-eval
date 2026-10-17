@@ -72,11 +72,21 @@ def validate_split(dataset: Dataset, manifest: SplitManifest) -> None:
 
 
 def validate_benchmark(
-    dataset: Dataset, manifest: SplitManifest, *, admission: DatasetAdmission
+    dataset: Dataset,
+    manifest: SplitManifest,
+    *,
+    admission: DatasetAdmission,
+    source_payload: bytes | None = None,
 ) -> None:
     if dataset.evidence_status != "frozen_corpus":
         raise ValueError("implementation_not_benchmark")
-    dataset = load_dataset(dataset_bytes(dataset), admission=admission)
+    admitted = load_dataset(
+        dataset_bytes(dataset) if source_payload is None else source_payload,
+        admission=admission,
+    )
+    if admitted != dataset:
+        raise ValueError("benchmark_dataset_binding")
+    dataset = admitted
     if manifest.seed != 20261014:
         raise ValueError("benchmark_split_seed")
     if dict(Counter(t.kind for t in dataset.tasks)) != COUNTS:

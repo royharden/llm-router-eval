@@ -149,7 +149,9 @@ def prepare_view(
         partition = split_manifest or split_families(dataset)
         validate_split(dataset, partition)
         if dataset.evidence_status == "frozen_corpus":
-            validate_benchmark(dataset, partition, admission=dataset_admission)
+            validate_benchmark(
+                dataset, partition, admission=dataset_admission, source_payload=dataset_payload
+            )
         dev, heldout = tuple(partition.dev), tuple(partition.heldout)
         seed = partition.seed
     split_of = {i: "dev" for i in dev} | {i: "heldout" for i in heldout}

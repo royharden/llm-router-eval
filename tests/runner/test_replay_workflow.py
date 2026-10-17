@@ -23,9 +23,10 @@ from llm_router_eval.data.corpus import (
     Task,
     dataset_bytes,
     digest,
+    load_dataset,
 )
 from llm_router_eval.data.seals import ConfigurationSeal
-from llm_router_eval.data.splits import split_families
+from llm_router_eval.data.splits import split_families, validate_benchmark
 from llm_router_eval.evaluation.campaign import (
     CampaignBinding,
     CampaignGrant,
@@ -81,7 +82,7 @@ def no_effects(monkeypatch, request):
     )
 
 
-def structural_case(tmp_path, *, split="dev", altered_labels=False):
+def structural_case(tmp_path, *, split="dev", altered_labels=False, dataset_encoding="canonical"):
     """300 fictional UNIT rows, two available source items; all labels agent_provisional."""
     originals = make_controls()
     source = originals.sources[0].model_copy(
@@ -113,6 +114,12 @@ def structural_case(tmp_path, *, split="dev", altered_labels=False):
         schema_version=1, evidence_status="frozen_corpus", sources=[source], tasks=tasks
     )
     payload = dataset_bytes(dataset)
+    if dataset_encoding == "pretty":
+        payload = (json.dumps(json.loads(payload), ensure_ascii=False, indent=2) + "\n").encode()
+    elif dataset_encoding == "trailing":
+        payload += b" \n\t"
+    elif dataset_encoding != "canonical":
+        raise ValueError("UNIT dataset encoding")
     dataset_grant = DatasetAdmission(
         dataset_sha256=hashlib.sha256(payload).hexdigest(),
         source_grants={source.source_id: source},
@@ -339,6 +346,31 @@ def test_tampered_independent_boundaries_refuse_before_output(tmp_path, mutation
     with pytest.raises(ValueError):
         invoke(paths, admission, target, expected=expected)
     assert not target.exists()
+
+
+@pytest.mark.parametrize("dataset_encoding", ["pretty", "trailing"])
+def test_admitted_json_representation_keeps_raw_authority(tmp_path, dataset_encoding):
+    paths, admission, target = structural_case(tmp_path, dataset_encoding=dataset_encoding)
+    report = invoke(paths, admission, target)
+    raw_sha256 = hashlib.sha256(paths[0].read_bytes()).hexdigest()
+    assert report["input_dataset_sha256"] == raw_sha256
+    assert admission["dataset_admission"]["dataset_sha256"] == raw_sha256
+    assert report["corpus_N"] == 150 and report["ledger"]["dispatched_attempts"] == 0
+
+
+def test_benchmark_raw_payload_cannot_authorize_a_different_dataset_object(tmp_path):
+    paths, admission, _ = structural_case(tmp_path)
+    payload = paths[0].read_bytes()
+    grant = DatasetAdmission.model_validate(admission["dataset_admission"])
+    dataset = load_dataset(payload, admission=grant)
+    reordered = dataset.model_copy(update={"tasks": list(reversed(dataset.tasks))})
+    with pytest.raises(ValueError, match="benchmark_dataset_binding"):
+        validate_benchmark(
+            reordered,
+            split_families(reordered),
+            admission=grant,
+            source_payload=payload,
+        )
 
 
 def test_existing_output_is_preserved_byte_for_byte(tmp_path):
