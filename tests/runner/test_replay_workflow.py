@@ -423,9 +423,7 @@ def update_bundle_pin(paths, admission, bundle, *, rebind_seal=False):
 
 
 @pytest.mark.parametrize("mutation", ["synthetic", "outbound", "duplicate", "prompt", "private"])
-def test_actual_origin_quota_and_public_scope_guards_with_matching_bundle_pin(
-    tmp_path, mutation
-):
+def test_actual_origin_quota_and_public_scope_guards_with_matching_bundle_pin(tmp_path, mutation):
     paths, admission, target = structural_case(tmp_path)
     bundle = json.loads(paths[1].read_bytes())
     if mutation == "synthetic":
@@ -524,7 +522,5 @@ def test_changed_private_labels_cannot_change_replay_public_inputs_or_capture_re
     assert report_a["source_book_sha256"] == report_b["source_book_sha256"]
     assert report_a["manifest_sha256"] != report_b["manifest_sha256"]
     assert (
-        report_a["ledger"]["dispatched_attempts"]
-        == report_b["ledger"]["dispatched_attempts"]
-        == 0
+        report_a["ledger"]["dispatched_attempts"] == report_b["ledger"]["dispatched_attempts"] == 0
     )
