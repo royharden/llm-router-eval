@@ -29,12 +29,13 @@ def main():
     )
     if args.input.stat().st_size > 8_000_000:
         raise ValueError("dataset_bytes")
-    dataset = load_dataset(args.input.read_bytes(), admission=admission)
+    source_payload = args.input.read_bytes()
+    dataset = load_dataset(source_payload, admission=admission)
     manifest = split_families(dataset)
     if args.benchmark:
         if admission is None:
             raise ValueError("benchmark_admission_required")
-        validate_benchmark(dataset, manifest, admission=admission)
+        validate_benchmark(dataset, manifest, admission=admission, source_payload=source_payload)
     with args.output.open("xb") as target:
         target.write(canonical_bytes(manifest.model_dump(mode="json")))
     print(
