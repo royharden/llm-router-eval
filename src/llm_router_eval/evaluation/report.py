@@ -136,6 +136,7 @@ def _cohort(result, view, gold, spec, source_rows):
 def build_report(result, view, ledger_totals, *, include_intervals=False):
     """Only explicit aggregate values enter this report. No prompts, labels or answers."""
     comparison = result.comparison
+    recorded = result.source.origin == "recorded_replay"
     gold = view.split_records(comparison.split)
     eligible_ids = tuple(g.item_id for g in gold if AnswerAdapter.label(g).kind != "rubric")
     spec = AnswerAdapter.metric_specs()[0]
@@ -262,7 +263,11 @@ def build_report(result, view, ledger_totals, *, include_intervals=False):
             total_exposure_usd=ledger_totals["total_exposure_usd"],
         ),
         cost_semantics=(
-            "Authored source costs are synthetic counterfactual controls, not model prices "
+            "Retained recorded source-cost metadata, not a new invoice measurement. "
+            "Replay external model charge is zero; unknown source costs stay unknown. "
+            "Counterfactual policy consumption must not be summed as collection spend."
+            if recorded
+            else "Authored source costs are synthetic counterfactual controls, not model prices "
             "or observed invoices. Policy consumption reuses the same collected sources; "
             "do not sum it as collection spend."
         ),
@@ -274,9 +279,14 @@ def build_report(result, view, ledger_totals, *, include_intervals=False):
         model_usage="unknown",
         intervals="canonical_family_bootstrap"
         if include_intervals
+        else "not_requested_for_recorded_replay"
+        if recorded
         else "not_requested_for_authored_controls",
         acceptance=(
-            "synthetic_implementation_only; no benchmark, calibration, heldout "
+            "admitted_recorded_replay; this report alone establishes no model quality, "
+            "calibration, heldout independence or release acceptance"
+            if recorded
+            else "synthetic_implementation_only; no benchmark, calibration, heldout "
             "or release acceptance"
         ),
     )
@@ -289,10 +299,19 @@ def render_json(report):
 
 
 def render_markdown(report):
+    recorded = report["evidence_origin"] == "recorded_replay"
     lines = [
-        "# Authored offline routing controls",
+        "# Admitted recorded routing replay" if recorded else "# Authored offline routing controls",
         "",
-        "Synthetic implementation evidence. No model quality, real pricing or heldout claim.",
+        (
+            "Recorded-source replay with caller-supplied admissions. No new model calls; "
+            "quality, calibration and independent heldout acceptance remain separate."
+            if recorded
+            else (
+                "Synthetic implementation evidence. No model quality, real pricing "
+                "or heldout claim."
+            )
+        ),
         "",
         "| Policy | Passed / eligible | Assigned | Unscored rubric | Missing/error | Stale |",
         "|---|---:|---:|---:|---:|---:|",

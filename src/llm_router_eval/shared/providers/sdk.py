@@ -209,14 +209,20 @@ class SDKTransport:
 
 
 def _owned_worker(data, *, timeout_s):
-    """Hard deadline includes startup and pipe writes; kill the owned tree before return."""
-    start = time.monotonic()
+    """Hard attempt deadline starts after the worker reports startup import.
+
+    Process spawn and SDK import are outside that budget. The owned tree is still
+    killed before return. attempt_timeout_s is unchanged.
+    """
+    spawned = time.monotonic()
+    start = spawned
     env = {
         k: os.environ[k] for k in ["SystemRoot", "WINDIR", "PATH", "TEMP", "TMP"] if k in os.environ
     }
     env.update(
         PYTHONPATH=str(Path(__file__).resolve().parents[len(__package__.split("."))]),
         PYTHONDONTWRITEBYTECODE="1",
+        PYTHONUNBUFFERED="1",
         PYTHONUTF8="1",
     )
     job = None
@@ -236,7 +242,7 @@ def _owned_worker(data, *, timeout_s):
     active_after = None
     try:
         process = subprocess.Popen(
-            [sys.executable, "-B", "-m", __package__ + ".sdk_worker"],
+            [sys.executable, "-u", "-B", "-m", __package__ + ".sdk_worker"],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
@@ -255,7 +261,12 @@ def _owned_worker(data, *, timeout_s):
 
         def read():
             try:
-                captured.append(process.stdout.read(100001))
+                pipe = process.stdout.fileno()
+                while True:
+                    block = os.read(pipe, 4096)
+                    if not block:
+                        break
+                    captured.append(block)
             except (OSError, ValueError):
                 io_failed.append(True)
 
@@ -265,19 +276,35 @@ def _owned_worker(data, *, timeout_s):
         ]
         for thread in threads:
             thread.start()
-        if job is not None:
-            try:
-                process.wait(timeout=max(0.001, timeout_s - (time.monotonic() - start)))
-            except subprocess.TimeoutExpired:
-                timed_out = True
-        else:
-            # Observe completion without reaping the owned session leader. Its PID cannot
-            # be reused before group termination, including the normal-return path.
-            while os.waitid(os.P_PID, process.pid, os.WEXITED | os.WNOWAIT | os.WNOHANG) is None:
-                if time.monotonic() - start >= timeout_s:
+        ready = b'{"event":"startup_ready"}'
+        startup_seen = False
+        while time.monotonic() - spawned < 90:
+            if ready in b"".join(captured):
+                startup_seen = True
+                break
+            if process.poll() is not None:
+                time.sleep(0.02)
+                break
+            time.sleep(0.02)
+        # The hard budget starts only once startup import has reported.
+        start = time.monotonic() if startup_seen else spawned
+        if startup_seen and process.poll() is None:
+            if job is not None:
+                try:
+                    process.wait(timeout=timeout_s)
+                except subprocess.TimeoutExpired:
                     timed_out = True
-                    break
-                time.sleep(0.005)
+            else:
+                # Observe completion without reaping the owned session leader. Its PID
+                # cannot be reused before group termination, including normal return.
+                while (
+                    os.waitid(os.P_PID, process.pid, os.WEXITED | os.WNOWAIT | os.WNOHANG)
+                    is None
+                ):
+                    if time.monotonic() - start >= timeout_s:
+                        timed_out = True
+                        break
+                    time.sleep(0.005)
     finally:
         if job is not None:
             active_after = job.close()
@@ -303,10 +330,14 @@ def _owned_worker(data, *, timeout_s):
         active_owned_processes_after=active_after,
         simulation=None,  # Set by the caller's explicit mode; this is process evidence only.
     )
-    if io_failed or not captured or len(captured[0]) > 100000:
+    payload = b"".join(captured)
+    if io_failed or not payload or len(payload) > 100000:
         if not timed_out:
             raise TransportFailure("unknown_dispatch")
-    lines = (captured[0] if captured else b"").splitlines()
+    lines = payload.splitlines() if payload else []
+    ready = b'{"event":"startup_ready"}'
+    if lines and lines[0].replace(b" ", b"") == ready:
+        lines = lines[1:]
     event = b'{"event":"wire_send"}'
     # Worker prints compact event JSON, then exactly one final reply. A timed-out
     # send retains the event even though no final body exists.

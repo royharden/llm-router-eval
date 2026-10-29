@@ -2,13 +2,111 @@
 
 import base64
 import json
+import os
+import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 
 from llm_router_eval.shared.callledger.models import canonical_digest
 from llm_router_eval.shared.providers import ProviderError
 from llm_router_eval.shared.providers.sdk import ProjectCredential, SDKTransport
+
+
+def test_fresh_worker_import_does_not_require_parent_controller_or_models():
+    """what_bug_this_catches: worker startup eagerly loads parent accounting schemas."""
+    source = Path(sys.modules[SDKTransport.__module__].__file__).resolve().parents[3]
+    script = r"""
+import importlib.abc
+import json
+import socket
+import sys
+
+sys.path.insert(0, sys.argv[1])
+
+def deny(*args, **kwargs):
+    raise RuntimeError("network_disabled")
+
+socket.socket.connect = deny
+socket.socket.connect_ex = deny
+socket.create_connection = deny
+try:
+    socket.create_connection(("example.invalid", 443))
+except RuntimeError:
+    pass
+else:
+    raise AssertionError("network_guard")
+
+class NoParentModels(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname == "pydantic" or fullname.startswith("pydantic.") or fullname in {
+            "llm_router_eval.shared.callledger",
+            "llm_router_eval.shared.providers.models",
+            "llm_router_eval.shared.providers.controller",
+            "llm_router_eval.shared.providers.adapters",
+            "llm_router_eval.shared.providers.captures",
+            "llm_router_eval.shared.providers.repair",
+            "llm_router_eval.shared.providers.sdk",
+        }:
+            raise AssertionError("unnecessary_worker_import:" + fullname)
+        return None
+
+sys.meta_path.insert(0, NoParentModels())
+from llm_router_eval.shared.providers import sdk_worker
+print(json.dumps({"worker_source": sdk_worker.__file__, "network_guard": True}))
+"""
+    env = {
+        k: os.environ[k] for k in ("SystemRoot", "WINDIR", "PATH", "TEMP", "TMP") if k in os.environ
+    }
+    env.update(PYTHONDONTWRITEBYTECODE="1", PYTHONUTF8="1")
+    result = subprocess.run(
+        [sys.executable, "-B", "-c", script, str(source)],
+        capture_output=True,
+        text=True,
+        env=env,
+        timeout=20,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    observation = json.loads(result.stdout)
+    assert (
+        Path(observation["worker_source"]).resolve()
+        == (source / "llm_router_eval/shared/providers/sdk_worker.py").resolve()
+    )
+    assert observation["network_guard"] is True
+
+
+def test_public_provider_exports_keep_canonical_object_identity():
+    """what_bug_this_catches: deferred exports must not replace public controller types."""
+    import importlib
+
+    from llm_router_eval.shared import providers
+
+    expected = {
+        "models": ("models", None),
+        "ModelSupport": ("adapters", "ModelSupport"),
+        "ProviderConfig": ("adapters", "ProviderConfig"),
+        "FixtureIndex": ("captures", "FixtureIndex"),
+        "Provider": ("controller", "Provider"),
+        "ProviderError": ("controller", "ProviderError"),
+        "TransportFailure": ("controller", "TransportFailure"),
+        "TransportReply": ("controller", "TransportReply"),
+        "ContentValidator": ("repair", "ContentValidator"),
+        "GenerationRepairPolicy": ("repair", "GenerationRepairPolicy"),
+        "build_generation_repair_request": ("repair", "build_generation_repair_request"),
+        "ProjectCredential": ("sdk", "ProjectCredential"),
+        "SDKTransport": ("sdk", "SDKTransport"),
+    }
+    assert set(providers.__all__) == set(expected)
+    assert set(expected) <= set(dir(providers))
+    for name, (module_name, attribute) in expected.items():
+        module = importlib.import_module(f"{providers.__name__}.{module_name}")
+        assert getattr(providers, name) is (
+            module if attribute is None else getattr(module, attribute)
+        )
+    with pytest.raises(AttributeError):
+        _ = providers.not_a_provider_export
 
 
 def payload():

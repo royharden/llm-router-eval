@@ -22,3 +22,13 @@ captures/live/
 .chatexports/
 .agent-registry/
 .agent-work/
+
+# Local credentials, archives and generated dependencies
+.creds/
+ArchiveManager-creds.txt
+*.pem
+*.key
+*.p12
+*.pfx
+*.zip
+node_modules/

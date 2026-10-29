@@ -37,6 +37,31 @@ uv run --frozen python -m llm_router_eval demo --tasks fixtures/implementation-c
 
 `code`, `cheap` and `escalation` name observations of the same complete authored matrix: bounded local code executes, cheap answers are selected, and unvalidated cascade checkers escalate. These are construction demonstrations, not separately sampled model experiments.
 
+## Separately admitted recorded replay
+
+The separate `replay` command connects the existing frozen-corpus, recorded-capture,
+campaign-history and comparison ports. It makes no provider requests or dataset downloads.
+It requires actual caller-owned inputs; the repository includes no real corpus, independent
+labels, reviewed model recordings or authority for a heldout campaign.
+
+```sh
+uv run --frozen python -m llm_router_eval replay --dataset /private/corpus.json --replay /private/recorded-inputs.json --admission /trusted/replay-admission.json --admission-sha256 "$ADMISSION_SHA256" --split dev --out ../new-recorded-replay
+```
+
+Obtain the admission file and its expected digest from the trusted caller separately from
+the dataset/capture bundle. A digest pins bytes; it does not prove source rights, human
+identity or independent experiment authority. The command validates those supplied bindings,
+the fixed 300-item corpus/split, source receipts and configuration seal before creating output.
+Synthetic captures are refused on this path. Missing source observations retain their assigned
+denominators; rubric scoring remains unvalidated. The reports label retained recorded-source
+metadata separately from the current external charge of zero and local replay timing.
+
+Output is a new directory containing accounting/campaign SQLite metadata and safe aggregate
+JSON/Markdown. Existing or partial output is refused without overwriting it. This command has
+no implicit resume/reset or raw-payload archive. Heldout replay additionally requires matching
+independent seal, dev lock, source revision and once-only history admission. See
+[the replay wire contract](docs/evaluation-contracts.md#explicit-recorded-replay-cli).
+
 ## Accounting, privacy and interpretation
 
 The SQLite/Decimal ledger owns funding and durable accounting. Policies use fresh public contexts and reuse the declared observations. Canonical fixed-population comparison retains missing/stale cases and explicitly not-run methods. Private scoring labels/rubrics do not enter routing requests or safe reports. Frozen population bytes and method configuration identities are checked before execution.

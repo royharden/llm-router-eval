@@ -22,7 +22,7 @@ An optional explicit result writer receives a copy of actual results. No default
 
 The store implements the canonical S2 `HeldoutHistory` port. An actual heldout owner grant must bind independent seal, dev lock, method configurations, manifest, source revision and history reference before exposure. The admission is persisted once; a repeated call or a reason string does not grant another exposure. Captured synthetic source cannot be used as real benchmark evidence. The location/state binding does not claim tamper resistance against an owner deleting or replacing the physical store; real authority, independent seal and external history custody remain required.
 
-This stage still executes authored controls only. Report/CLI assembly, licensed corpus admission, independent labels and human calibration, actual heldout exposure authority, real reviewed captures/live SDK, scientific chart rendering and independent app acceptance retain their separate prerequisites.
+The authored CLI and aggregate figures are implemented. The separate recorded-replay entrypoint described below connects existing admission and campaign ports; actual licensed corpus inputs, independent labels/calibration, heldout authority, reviewed recordings and finished-app acceptance retain their separate prerequisites.
 
 ## Canonical comparison and private references
 
@@ -41,3 +41,88 @@ S2 retains all frozen IDs across missing and stale source statuses. Disabled met
 Aggregate reporting calls the unchanged canonical metric/accuracy/not-measured ports. It retains eligible versus unscored rubric counts and missing/stale/error statuses. Source costs are observed fixture provenance or explicitly invented counterfactual controls; they are separate from current external charge. A missing matrix or unknown observed source cost leaves the source point/upper total unknown. Reported known subtotals are not claims about unretained cells. Cost-per-pass is represented as a cost/pass-count ratio and is undefined at zero passes. Local lookup/policy timing uses standard-library inclusive quantiles with counts, without a model-latency or TTFT claim.
 
 No raw labels, prompts, answers, arbitrary provider errors or usage bodies enter the constructed safe reports. Report serialization is deterministic from the same report data; a new execution records different timing input. Existing outputs are refused before ledger/report writes. A failed execution can retain its own partial new directory; no overwrite or implicit cleanup is performed.
+
+## Explicit recorded-replay CLI
+
+`replay --dataset <file> --replay <file> --admission <file>
+--admission-sha256 <expected digest> --split dev|heldout --out <new directory>`
+has a separate path from `eval`/`demo`. Their synthetic-only/twelve-control limits
+are unchanged. No network client, provider credential, transport, acquisition or
+paid dispatch is accepted by this workflow. It invokes the existing
+`MatrixSource(mode="strict_replay")`, `CampaignStore`, canonical comparison and
+aggregate report; it does not implement another evaluator or money ledger.
+
+The separate admission file and expected SHA-256 come from the actual trusted
+caller, not from an untrusted dataset or its capture bundle. The digest pins bytes;
+it does not establish rights, human identity, independent authorship or experiment
+authority. Caller-owned provenance and history custody must actually exist.
+`ReplayInputs` and `ReplayAdmission` in `evaluation/replay_workflow.py` are the
+normative closed wire models, using the existing module-owned models underneath.
+Duplicate JSON keys, unknown fields and oversized inputs refuse. Dataset, replay
+bundle and admission files are bounded to 8 MB, 40 MB and 4 MB respectively.
+
+The replay bundle contains:
+
+- `run_id`, `frozen_at`, public inference `config`, zero-cap/outbound-zero
+  `authority` and outbound-zero `limits`, and all seven `policy_configs`.
+- Explicit `disabled_methods`; these retain fixed assigned populations and are
+  reported as not run.
+- `items`, each containing only `public_input: {prompt_id, text}` and retained
+  model `cheap_text`. These must match selected public corpus inputs. A missing
+  source item stays unavailable in the fixed denominator. Scoring labels never
+  enter request preparation.
+- `captures`, each with exact `content_base64`, existing `SourceCaptureRef`,
+  namespace, source generation, public-context and dispatched-envelope hashes,
+  and review receipt identity. The strict path rejects synthetic source origin;
+  existing `FixtureIndex` requires matching separately trusted live-capture
+  receipts. These are retained-source declarations, not new live calls. Missing
+  individual observations produce explicit failed/unavailable cells; malformed
+  supplied source bindings refuse. The retained cheap observation must match the
+  checker preparation, without fabricating a replacement answer.
+
+The admission supplies exact `input_bundle_sha256`, existing `DatasetAdmission`
+and `ReferenceAdmission` plus its trusted reference map, separately verified
+`live_capture_receipts`, `ConfigurationSeal`, `CampaignBinding`, `CampaignGrant`
+and its trusted map. For heldout it also supplies the canonical
+`heldout_admission` fields. It has no self-authorize or synthetic-promotion flag.
+The existing frozen-corpus validation still requires the full prescribed
+300-item mix and family-separated 150/150 split. Rights, reference origins and
+source receipts cannot be inferred merely from those counts.
+
+Benchmark revalidation carries the originally admitted dataset bytes and checks
+that their parsed dataset matches the supplied dataset object. The split manifest
+identifies canonical dataset content; the dataset grant and configuration seal
+continue to bind the exact raw file bytes, including valid JSON whitespace.
+
+The configuration seal binds the exact dataset bytes and canonical family split,
+public inference configuration, ordered retained price references, seven method
+configurations, policy thresholds, explicit unvalidated/no-judge profile,
+capture-book digest and raw replay-bundle bytes. `expected_seal` describes these
+used identities; calling it creates no trust. The caller-supplied seal must match.
+Preparation reuses the existing zero-dispatch request-evidence profile; it does
+not establish new paid token/price bounds. Cascades remain unvalidated and rubric
+cases unscored in this CLI profile.
+
+Campaign authority must additionally match the selected split and exact assigned
+IDs, method/public/source/seal/manifest identities, independent seal/dev lock,
+history reference and resolved new `campaign.sqlite3` location. The pure
+`validate_campaign_authority` and `validate_exposure` functions are the same
+checks used by durable campaign creation/recording. All of these input checks
+precede output creation. Canonical heldout comparison records the actual once-only
+exposure through that store; a reason string does not authorize a rerun.
+
+The fresh output contains `accounting.sqlite3`, `campaign.sqlite3`, `report.json`
+and `report.md`; the campaign lock is metadata only. Safe aggregates omit raw
+prompts, responses and labels. Recorded source-cost metadata remains distinct
+from current external charge zero; unknown source costs and missing/error
+denominators remain visible. Timing describes local replay, not new inference or
+TTFT. A completed command is not calibration, model-quality or release acceptance.
+
+Existing or partial output is always refused and preserved. No implicit
+resumption, reset, raw-result archive or automatic new-location grant is provided.
+The existing lower-level campaign recovery API still requires an explicit trusted
+retained-result reader. Location/state binding cannot prevent an owner from
+deleting its own store; actual independent history custody remains necessary.
+Structural tests contain original fictional UNIT authority/capture objects and
+agent-provisional labels only. Their contract-shaped origin fields do not make
+those controls real recordings, source rights, human labels or heldout evidence.

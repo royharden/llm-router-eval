@@ -76,6 +76,14 @@ def regression_purpose(request):
                 "Producer overwrites earlier evidence.",
             ),
             (
+                "test_prepare_benchmark_preserves_admitted_raw_bytes",
+                "Preparation reserializes admitted raw bytes before benchmark validation.",
+            ),
+            (
+                "test_prepare_benchmark_refuses_changed_bytes_missing_admission_and_overwrite",
+                "Preparation bypasses exact admission or replaces existing output.",
+            ),
+            (
                 "test_campaign_start_binds_actual_dataset_manifest_and_seal",
                 "Campaign starts with wrong IDs or seal.",
             ),
@@ -375,3 +383,94 @@ def test_campaign_start_binds_actual_dataset_manifest_and_seal():
             ),
             seal=pinned,
         )
+
+
+@pytest.fixture
+def prepare_cli(monkeypatch):
+    """Exercise the real preparation entrypoint without starting another process."""
+
+    def blocked(*args, **kwargs):
+        raise RuntimeError("network denied positive control")
+
+    monkeypatch.setattr(socket, "socket", blocked)
+    monkeypatch.setattr(socket, "create_connection", blocked)
+    with pytest.raises(RuntimeError, match="network denied"):
+        socket.create_connection(("example.invalid", 443))
+    root = Path(__file__).resolve().parents[2]
+    spec = importlib.util.spec_from_file_location("prepare_data", root / "scripts/prepare_data.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    def invoke(input_path, output_path, admission_path):
+        argv = [
+            "prepare_data.py",
+            "--input",
+            str(input_path),
+            "--output",
+            str(output_path),
+            "--benchmark",
+        ]
+        if admission_path is not None:
+            argv.extend(["--admission", str(admission_path)])
+        monkeypatch.setattr(sys, "argv", argv)
+        return module.main()
+
+    return invoke
+
+
+@pytest.mark.parametrize("encoding", ["canonical", "pretty", "trailing_whitespace"])
+def test_prepare_benchmark_preserves_admitted_raw_bytes(tmp_path, prepare_cli, encoding):
+    """Only fictional UNIT trust doubles; no corpus rights or human claims."""
+    dataset, payload, grant = frozen_trust_double()
+    if encoding == "pretty":
+        payload = json.dumps(dataset.model_dump(mode="json"), indent=2).encode("utf-8")
+    elif encoding == "trailing_whitespace":
+        payload += b" \n\t"
+    grant = grant.model_copy(update={"dataset_sha256": hashlib.sha256(payload).hexdigest()})
+    input_path = tmp_path / "unit-dataset.json"
+    admission_path = tmp_path / "unit-admission.json"
+    output_path = tmp_path / "split.json"
+    input_path.write_bytes(payload)
+    admission_path.write_bytes(canonical_bytes(grant.model_dump(mode="json")))
+
+    prepare_cli(input_path, output_path, admission_path)
+
+    expected = canonical_bytes(split_families(dataset).model_dump(mode="json"))
+    assert output_path.read_bytes() == expected
+    assert input_path.read_bytes() == payload
+    # Raw grant identity can differ; canonical split identity remains unchanged.
+    assert (
+        json.loads(expected)["dataset_sha256"] == hashlib.sha256(dataset_bytes(dataset)).hexdigest()
+    )
+
+
+@pytest.mark.parametrize("refusal", ["changed_bytes", "missing_admission", "overwrite"])
+def test_prepare_benchmark_refuses_changed_bytes_missing_admission_and_overwrite(
+    tmp_path, prepare_cli, refusal
+):
+    """Admission failures precede output creation; existing bytes stay intact."""
+    _, payload, grant = frozen_trust_double()
+    input_path = tmp_path / "unit-dataset.json"
+    admission_path = tmp_path / "unit-admission.json"
+    output_path = tmp_path / "split.json"
+    input_path.write_bytes(payload + b" " if refusal == "changed_bytes" else payload)
+    admission_path.write_bytes(canonical_bytes(grant.model_dump(mode="json")))
+    if refusal == "overwrite":
+        output_path.write_bytes(b"existing-output-canary")
+        error, match = FileExistsError, None
+    elif refusal == "changed_bytes":
+        error, match = ValueError, "frozen_digest"
+    else:
+        error, match = ValueError, "frozen_admission_required"
+
+    with pytest.raises(error, match=match):
+        prepare_cli(
+            input_path,
+            output_path,
+            None if refusal == "missing_admission" else admission_path,
+        )
+
+    if refusal == "overwrite":
+        assert output_path.read_bytes() == b"existing-output-canary"
+    else:
+        assert not output_path.exists()

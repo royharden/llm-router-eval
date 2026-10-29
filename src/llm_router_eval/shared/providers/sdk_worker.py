@@ -40,7 +40,15 @@ def _decode(value, maximum):
 
 
 def execute(
-    flavor, payload_json, credential, timeout_s, max_response_bytes, *, mock=None, observe=None
+    flavor,
+    payload_json,
+    credential,
+    timeout_s,
+    max_response_bytes,
+    *,
+    mock=None,
+    observe=None,
+    startup=None,
 ):
     """Run the native path, returning only a closed failure on any local error."""
     try:
@@ -55,13 +63,22 @@ def execute(
             max_response_bytes,
             mock=mock,
             observe=observe,
+            startup=startup,
         )
     except Exception:
         return _failure()
 
 
 def _execute(
-    flavor, payload_json, credential, timeout_s, max_response_bytes, *, mock=None, observe=None
+    flavor,
+    payload_json,
+    credential,
+    timeout_s,
+    max_response_bytes,
+    *,
+    mock=None,
+    observe=None,
+    startup=None,
 ):
     """Return a closed IPC reply; call only inside the sanitized owned worker.
 
@@ -95,8 +112,15 @@ def _execute(
         return _failure()
 
     # Imports stay inside this function; main sanitizes before reaching them.
+    # The supervising process starts its hard deadline only after startup().
     import httpx2
 
+    if flavor == "openai_responses":
+        from openai import OpenAI
+    else:
+        from typesafe_sdk import RetryPolicy, TypeSafeClient
+    if startup is not None:
+        startup()
     deadline = time.monotonic() + timeout_s
     reply = None
     sends = 0
@@ -205,7 +229,6 @@ def _execute(
     )
     try:
         if flavor == "openai_responses":
-            from openai import OpenAI
 
             class BoundedPlatformOpenAI(OpenAI):
                 def platform_headers(self):
@@ -236,8 +259,6 @@ def _execute(
             ) as client:
                 client.responses.create(**payload)
         else:
-            from typesafe_sdk import RetryPolicy, TypeSafeClient
-
             with TypeSafeClient(
                 api_key=credential,
                 model=payload["model"],
@@ -290,6 +311,22 @@ def _deny_network():
     raise RuntimeError("network_guard")
 
 
+def _emit(payload):
+    """Write one protocol line and push it through the Windows pipe buffer.
+
+    A pipe-backed stdout holds a small os.write until the next write or process
+    exit. The parent must see startup and the physical-send event while this
+    process is still blocked, so the hard deadline can cancel that wait.
+    """
+    os.write(1, payload)
+    if os.name != "nt":
+        return
+    import ctypes
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.FlushFileBuffers(ctypes.c_void_p(kernel32.GetStdHandle(-11)))
+
+
 def main():
     """One bounded request, at most one content-free event, one closed reply."""
     allowed = {"SYSTEMROOT", "WINDIR", "PATH", "TEMP", "TMP"}
@@ -298,11 +335,12 @@ def main():
     os.environ.update(retained)
     logging.disable(sys.maxsize)
     result = _failure()
-    original_stdout = sys.stdout
 
     def observe():
-        original_stdout.write('{"event":"wire_send"}\n')
-        original_stdout.flush()
+        _emit(b'{"event":"wire_send"}\n')
+
+    def startup():
+        _emit(b'{"event":"startup_ready"}\n')
 
     try:
         raw = sys.stdin.buffer.read(MAX_STDIN + 1)
@@ -330,6 +368,7 @@ def main():
                     envelope["max_response_bytes"],
                     mock=envelope["mock"],
                     observe=observe,
+                    startup=startup,
                 )
     except Exception:
         result = _failure()
